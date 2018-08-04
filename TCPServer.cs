@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 
 namespace Igor.TCP {
-	class TCPServer : TCPConnection {
+	public class TCPServer : TCPConnection {
 
 		private TcpClient connected;
 

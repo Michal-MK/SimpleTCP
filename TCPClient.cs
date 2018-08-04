@@ -4,19 +4,20 @@ using System.Net.Sockets;
 
 
 namespace Igor.TCP {
-	class TCPClient : TCPConnection {
+	public class TCPClient : TCPConnection {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
 		private TcpClient server;
 
 
+		public bool isListeningForData { get { return listeningForData; } }
+
 		public TCPClient(string ipAddress, ushort port) : this(
 			new ConnectionData(ipAddress, port)) {
-			ConnectionData data = new ConnectionData("",0);
-			
-		}
+			ConnectionData data = new ConnectionData("", 0);
 
+		}
 
 
 		public TCPClient(ConnectionData data) {
@@ -35,6 +36,16 @@ namespace Igor.TCP {
 			else {
 				throw new Exception("Entered Invalid IP Address!");
 			}
+		}
+
+
+		public void ListenForData() {
+			listeningForData = true;
+			DataReception();
+		}
+
+		public void StopListening() {
+			listeningForData = false;
 		}
 	}
 }
