@@ -40,12 +40,12 @@ namespace Igor.TCP {
 			stream = connected.GetStream();
 			Console.WriteLine("Client connected");
 			listeningForData = true;
-			DataReception();
 			OnConnectionEstablished?.Invoke(this, this);
+			DataReception();
 		}
 
 
-		public async void RaiseRequest<T>(int ID) {
+		public async void RaiseRequest<T>(byte ID) {
 			T data = await requestHandler.Request<T>(ID);
 			OnRequestFullfilled(ID, data);
 		}

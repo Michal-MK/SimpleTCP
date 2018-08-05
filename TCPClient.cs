@@ -10,6 +10,8 @@ namespace Igor.TCP {
 
 		private TcpClient server;
 
+		internal TCPRequest requestHandler;
+
 
 		public bool isListeningForData { get { return listeningForData; } }
 
@@ -39,6 +41,22 @@ namespace Igor.TCP {
 		}
 
 
+		public async void RaiseRequest<T>(byte ID) {
+			T data = await requestHandler.Request<T>(ID);
+			OnRequestFullfilled(ID, data);
+		}
+
+		private void OnRequestFullfilled<T>(object sender, T e) {
+			int id = (int)sender;
+			switch (id) {
+				case 128: {
+					Console.WriteLine(e.ToString());
+					break;
+				}
+			}
+		}
+
+
 		public void ListenForData() {
 			listeningForData = true;
 			DataReception();
@@ -46,6 +64,10 @@ namespace Igor.TCP {
 
 		public void StopListening() {
 			listeningForData = false;
+		}
+
+		public void ListenForRequests() {
+
 		}
 	}
 }
