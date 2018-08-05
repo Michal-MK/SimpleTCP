@@ -11,7 +11,7 @@ namespace Igor.TCP {
 
 		public event EventHandler<TCPServer> OnConnectionEstablished;
 
-		public TCPServer() {
+		public TCPServer(): base(true) {
 			requestHandler = new TCPRequest(this);
 		}
 
@@ -51,7 +51,7 @@ namespace Igor.TCP {
 		}
 
 		private void OnRequestFullfilled<T>(object sender, T e) {
-			int id = (int)sender;
+			int id = (byte)sender;
 			switch (id) {
 				case 128: {
 					Console.WriteLine(e.ToString());

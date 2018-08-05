@@ -20,7 +20,7 @@ namespace Igor.TCP {
 		}
 
 
-		public TCPClient(ConnectionData data) {
+		public TCPClient(ConnectionData data): base(false) {
 			this.port = data.port;
 			bf.Binder = new MyBinder();
 			if (IPAddress.TryParse(data.ipAddress, out address)) {

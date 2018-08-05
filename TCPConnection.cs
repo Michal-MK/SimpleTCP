@@ -12,14 +12,18 @@ namespace Igor.TCP {
 		protected NetworkStream stream;
 		protected bool listeningForData;
 
+		internal bool isServer;
+
 		public event EventHandler<TCPData> OnTCPDataReceived;
 		public event EventHandler<string> OnStringReceived;
 		public event EventHandler<Int64> OnInt64Received;
+		public event EventHandler<object> OnRequestAnswered;
 
 		internal ServerIDs dataIDs;
 
-		internal TCPConnection() {
+		internal TCPConnection(bool isServer) {
 			dataIDs = new ServerIDs(this);
+			this.isServer = isServer;
 		}
 
 		public void SendData(TCPData data) {
@@ -71,6 +75,9 @@ namespace Igor.TCP {
 				else if (data == typeof(Int64)) {
 					OnInt64Received(this, (Int64)receivedData);
 				}
+				else if(data == typeof(TCPResponse)) {
+					OnRequestAnswered(this, receivedData);
+				}
 			}
 		}
 
@@ -104,38 +111,6 @@ namespace Igor.TCP {
 				ms.Seek(0, SeekOrigin.Begin);
 
 				return dataIDs.IndetifyID(packetID, out dataObj, ms);
-			}
-		}
-
-		public async Task<Tuple<Type, object>> ReceiveDataAsync() {
-			using (MemoryStream ms = new MemoryStream()) {
-				Console.WriteLine("Waiting for PacketSize bytes");
-				byte[] packetSize = new byte[8];
-				Int64 totalReceived = 0;
-				while (totalReceived < 8) {
-					totalReceived += await stream.ReadAsync(packetSize, 0, 8);
-				}
-				totalReceived = 0;
-				Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
-				byte[] packetID = new byte[ServerIDs.PACKET_ID_COMPLEXITY];
-				while (totalReceived < ServerIDs.PACKET_ID_COMPLEXITY) {
-					totalReceived += await stream.ReadAsync(packetID, 0, ServerIDs.PACKET_ID_COMPLEXITY);
-				}
-				Console.WriteLine("Size and ID received");
-
-				byte[] data = new byte[toReceive];
-				totalReceived = 0;
-				while (totalReceived < toReceive) {
-					if ((int)(toReceive - totalReceived) == 0) {
-						break;
-					}
-					totalReceived += await stream.ReadAsync(data, 0, (int)(toReceive - totalReceived));
-					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
-				}
-				ms.Flush();
-				ms.Write(data, 0, data.Length);
-				ms.Seek(0, SeekOrigin.Begin);
-				return new Tuple<Type, object>(dataIDs.IndetifyID(packetID, out object dataObj, ms), dataObj);
 			}
 		}
 
@@ -187,14 +162,21 @@ namespace Igor.TCP {
 						return typeof(Int64);
 					}
 					case TestID: {
-						object obj = idDict[id].DynamicInvoke(null);
-						using (MemoryStream internalMS = new MemoryStream()) {
-							bf.Serialize(internalMS, obj);
-							ms.Seek(0, SeekOrigin.Begin);
-							connection.SendData(id, internalMS.ToArray());
+						Type t;
+						if (connection.OnRequestAnswered == null) {
+							object obj = idDict[id].DynamicInvoke(null);
+							using (MemoryStream internalMS = new MemoryStream()) {
+								bf.Serialize(internalMS, obj);
+								connection.SendData(id, internalMS.ToArray());
+							}
+							dataObj = null;
+							t = null;
 						}
-						dataObj = null;
-						return null;
+						else {
+							dataObj = bf.Deserialize(ms);
+							t = typeof(TCPResponse);
+						}
+						return t;
 					}
 
 					default: {
