@@ -189,7 +189,7 @@ namespace Igor.TCP {
 					case TestID: {
 						object obj = idDict[id].DynamicInvoke(null);
 						using (MemoryStream internalMS = new MemoryStream()) {
-							bf.Serialize(ms, obj);
+							bf.Serialize(internalMS, obj);
 							ms.Seek(0, SeekOrigin.Begin);
 							connection.SendData(id, internalMS.ToArray());
 						}
