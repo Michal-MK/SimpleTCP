@@ -47,6 +47,7 @@
     <Compile Include="TCPConnection.cs" />
     <Compile Include="TCPData.cs" />
     <Compile Include="TCPRequest.cs" />
+    <Compile Include="TCPResponse.cs" />
     <Compile Include="TCPServer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
