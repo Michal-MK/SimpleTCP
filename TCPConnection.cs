@@ -45,7 +45,7 @@ namespace Igor.TCP {
 
 		public void SendData(byte dataID, byte[] data) {
 			byte[] packetSize = BitConverter.GetBytes(data.LongLength);
-			byte packetID = ServerIDs.TCPDataID;
+			byte packetID = dataID;
 			byte[] merged = new byte[data.Length + ServerIDs.PACKET_ID_COMPLEXITY + packetSize.Length];
 
 			packetSize.CopyTo(merged, 0);

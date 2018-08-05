@@ -17,8 +17,6 @@ namespace Igor.TCP {
 
 		public TCPClient(string ipAddress, ushort port) : this(
 			new ConnectionData(ipAddress, port)) {
-			ConnectionData data = new ConnectionData("", 0);
-			requestHandler = new TCPRequest(this);
 		}
 
 
@@ -29,6 +27,7 @@ namespace Igor.TCP {
 				server = new TcpClient();
 				server.Connect(address, port);
 				stream = server.GetStream();
+				requestHandler = new TCPRequest(this);
 #if UNITY_ANDROID || UNITY_STANDALONE
 				Debug.Log("Connection Established");
 #else
