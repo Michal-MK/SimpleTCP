@@ -13,10 +13,5 @@ namespace Igor.TCP {
 			this.port = port;
 			OnConnectionDataParsed(this, this);
 		}
-
-		public static ConnectionData Parse(Func<Tuple<string, ushort>> func) {
-			Tuple<string, ushort> tuple = func.Invoke();
-			return new ConnectionData(tuple.Item1, tuple.Item2);
-		}
 	}
 }
