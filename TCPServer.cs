@@ -9,7 +9,7 @@ namespace Igor.TCP {
 		private TcpClient connected;
 		private TCPRequest requestHandler;
 
-		public event EventHandler OnConnectionEstablished;
+		public event EventHandler<TCPServer> OnConnectionEstablished;
 
 		public TCPServer() {
 			requestHandler = new TCPRequest(this);
@@ -41,7 +41,7 @@ namespace Igor.TCP {
 			Console.WriteLine("Client connected");
 			listeningForData = true;
 			DataReception();
-			OnConnectionEstablished?.Invoke(this,EventArgs.Empty);
+			OnConnectionEstablished?.Invoke(this, this);
 		}
 
 
