@@ -7,9 +7,14 @@ namespace Igor.TCP {
 	public class TCPServer : TCPConnection {
 
 		private TcpClient connected;
+		private TCPRequest requestHandler;
 
-		public void Start() {
-			Thread t = new Thread(StartServer);
+		public TCPServer() {
+			requestHandler = new TCPRequest(this);
+		}
+
+		public void Start(ushort port) {
+			Thread t = new Thread(() => { StartServer(port); });
 			t.Start();
 		}
 
@@ -17,7 +22,7 @@ namespace Igor.TCP {
 			listeningForData = false;
 		}
 
-		private void StartServer() {
+		private void StartServer(ushort port) {
 			IPAddress addr;
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
 				socket.Connect("8.8.8.8", 65530);
@@ -27,13 +32,29 @@ namespace Igor.TCP {
 			bf.Binder = new MyBinder();
 
 			Console.WriteLine(addr);
-			TcpListener listener = new TcpListener(addr, 7890);
+			TcpListener listener = new TcpListener(addr, port);
 			listener.Start();
 			connected = listener.AcceptTcpClient();
 			stream = connected.GetStream();
 			Console.WriteLine("Client connected");
 			listeningForData = true;
 			DataReception();
+		}
+
+
+		public async void RaiseRequest<T>(int ID) {
+			T data = await requestHandler.Request<T>(ID);
+			OnRequestFullfilled(ID, data);
+		}
+
+		private void OnRequestFullfilled<T>(object sender, T e) {
+			int id = (int)sender;
+			switch (id) {
+				case 128: {
+					Console.WriteLine(e.ToString());
+					break;
+				}
+			}
 		}
 	}
 }

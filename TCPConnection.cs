@@ -2,6 +2,8 @@
 using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Igor.TCP {
 	public abstract class TCPConnection {
@@ -14,7 +16,11 @@ namespace Igor.TCP {
 		public event EventHandler<string> OnStringReceived;
 		public event EventHandler<Int64> OnInt64Received;
 
+		internal ServerIDs dataIDs;
 
+		internal TCPConnection() {
+			dataIDs = new ServerIDs(this);
+		}
 
 		public void SendData(TCPData data) {
 			using (MemoryStream ms = new MemoryStream()) {
@@ -49,6 +55,9 @@ namespace Igor.TCP {
 			stream.Write(merged, 0, merged.Length);
 		}
 
+		internal NetworkStream GetStream() {
+			return stream;
+		}
 
 		protected void DataReception() {
 			while (listeningForData) {
@@ -94,39 +103,114 @@ namespace Igor.TCP {
 				ms.Write(data, 0, data.Length);
 				ms.Seek(0, SeekOrigin.Begin);
 
-				switch (ParseID(packetID)) {
-					case 0: {
-						//TCPData
-						dataObj = bf.Deserialize(ms);
-						return typeof(TCPData);
-					}
-					case 32: {
-						//String
-						dataObj = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-						return typeof(string);
-					}
-					case 64: {
-						//Int64
-						dataObj = BitConverter.ToInt64(ms.ToArray(), 0);
-						return typeof(Int64);
-					}
-					default: {
-						throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",
-							packetID[0]));
-					}
-				}
+				return dataIDs.IndetifyID(packetID, out dataObj, ms);
 			}
 		}
 
-		private int ParseID(byte[] packetID) {
-			return packetID[0];
+		public async Task<Tuple<Type, object>> ReceiveDataAsync() {
+			using (MemoryStream ms = new MemoryStream()) {
+				Console.WriteLine("Waiting for PacketSize bytes");
+				byte[] packetSize = new byte[8];
+				Int64 totalReceived = 0;
+				while (totalReceived < 8) {
+					totalReceived += await stream.ReadAsync(packetSize, 0, 8);
+				}
+				totalReceived = 0;
+				Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
+				byte[] packetID = new byte[ServerIDs.PACKET_ID_COMPLEXITY];
+				while (totalReceived < ServerIDs.PACKET_ID_COMPLEXITY) {
+					totalReceived += await stream.ReadAsync(packetID, 0, ServerIDs.PACKET_ID_COMPLEXITY);
+				}
+				Console.WriteLine("Size and ID received");
+
+				byte[] data = new byte[toReceive];
+				totalReceived = 0;
+				while (totalReceived < toReceive) {
+					if ((int)(toReceive - totalReceived) == 0) {
+						break;
+					}
+					totalReceived += await stream.ReadAsync(data, 0, (int)(toReceive - totalReceived));
+					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
+				}
+				ms.Flush();
+				ms.Write(data, 0, data.Length);
+				ms.Seek(0, SeekOrigin.Begin);
+				return new Tuple<Type, object>(dataIDs.IndetifyID(packetID, out object dataObj, ms), dataObj);
+			}
 		}
 
-		private class ServerIDs {
+		private byte[] ToBuffer(object obj) {
+			using (MemoryStream ms = new MemoryStream()) {
+				BinaryFormatter bf = new BinaryFormatter();
+				bf.Serialize(ms, obj);
+				return ms.ToArray();
+			}
+		}
+
+		internal class ServerIDs {
+
+
 			public const int PACKET_ID_COMPLEXITY = 1;
 			public const byte TCPDataID = 0;
 			public const byte StringID = 32;
 			public const byte LongID = 64;
+			public const byte TestID = 128;
+
+
+			internal readonly Dictionary<byte, Delegate> idDict = new Dictionary<byte, Delegate>();
+
+			private BinaryFormatter bf = new BinaryFormatter();
+			private TCPConnection connection;
+
+
+			internal ServerIDs(TCPConnection connection) {
+				this.connection = connection;
+			}
+
+			private byte ParseID(byte[] packetID) {
+				return packetID[0];
+			}
+
+			public Type IndetifyID(byte[] ID, out object dataObj, MemoryStream ms) {
+				byte id = ParseID(ID);
+				switch (id) {
+					case TCPDataID: {
+						dataObj = bf.Deserialize(ms);
+						return typeof(TCPData);
+					}
+					case StringID: {
+						dataObj = System.Text.Encoding.UTF8.GetString(ms.ToArray());
+						return typeof(string);
+					}
+					case LongID: {
+						dataObj = BitConverter.ToInt64(ms.ToArray(), 0);
+						return typeof(Int64);
+					}
+					case TestID: {
+						object obj = idDict[id].DynamicInvoke(null);
+						using (MemoryStream internalMS = new MemoryStream()) {
+							bf.Serialize(ms, obj);
+							ms.Seek(0, SeekOrigin.Begin);
+							connection.SendData(id, internalMS.ToArray());
+						}
+						dataObj = null;
+						return null;
+					}
+
+					default: {
+						throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",
+							ID[0]));
+					}
+				}
+			}
+
+			internal void AddNew<TData>(byte ID, Func<TData> func) {
+				idDict.Add(ID, func);
+			}
+
+			internal void RemoveFunc(byte ID) {
+				idDict.Remove(ID);
+			}
 		}
 	}
 }
