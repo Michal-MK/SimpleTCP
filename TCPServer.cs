@@ -7,7 +7,7 @@ namespace Igor.TCP {
 	public class TCPServer : TCPConnection {
 
 		private TcpClient connected;
-		private TCPRequest requestHandler;
+		public TCPRequest requestHandler { get; }
 
 		public event EventHandler<TCPServer> OnConnectionEstablished;
 

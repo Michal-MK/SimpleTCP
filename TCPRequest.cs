@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	class TCPRequest {
+	public class TCPRequest {
 
 		private TCPConnection connection;
 
@@ -13,7 +13,7 @@ namespace Igor.TCP {
 			connection = undrelyingConnection;
 		}
 
-		public void DefineRequest<TData>(byte ID, Func<TData> function) {
+		public void DefineRequestID<TData>(byte ID, Func<TData> function) {
 			connection.dataIDs.AddNew(ID, function);
 		}
 

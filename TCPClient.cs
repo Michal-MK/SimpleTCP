@@ -10,7 +10,7 @@ namespace Igor.TCP {
 
 		private TcpClient server;
 
-		internal TCPRequest requestHandler;
+		public TCPRequest requestHandler { get; }
 
 
 		public bool isListeningForData { get { return listeningForData; } }
@@ -18,7 +18,7 @@ namespace Igor.TCP {
 		public TCPClient(string ipAddress, ushort port) : this(
 			new ConnectionData(ipAddress, port)) {
 			ConnectionData data = new ConnectionData("", 0);
-
+			requestHandler = new TCPRequest(this);
 		}
 
 
