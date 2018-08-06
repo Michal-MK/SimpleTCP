@@ -18,6 +18,7 @@ namespace Igor.TCP {
 		public event EventHandler<string> OnStringReceived;
 		public event EventHandler<Int64> OnInt64Received;
 		internal event EventHandler<TCPResponse> _OnResponse;
+		internal event EventHandler<object> _OnCustomDataReceived;
 
 		public DataIDs dataIDs;
 

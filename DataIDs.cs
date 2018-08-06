@@ -16,7 +16,7 @@ namespace Igor.TCP {
 		public const byte ResponseReceptionID = 255;
 
 
-		internal readonly Dictionary<byte, Type> idDict = new Dictionary<byte, Type>();
+		internal readonly Dictionary<byte, Tuple<Type, Delegate>> idDict = new Dictionary<byte, Tuple<Type,Delegate>>();
 
 
 		internal readonly Dictionary<byte, Type> requestDict = new Dictionary<byte, Type>();
@@ -54,12 +54,14 @@ namespace Igor.TCP {
 				}
 				case UserDefined: {
 					byte[] data = ms.ToArray();
-					Type t = idDict[data[0]];
-					ms.Flush();
-					ms.Write(data, 1, data.Length - 1);
+					Type t = idDict[data[0]].Item1;
+					using(MemoryStream internalMS = new MemoryStream()) {
+						internalMS.Write(data, 1, data.Length - 1);
+					}
 					ms.Seek(0, SeekOrigin.Begin);
 					dataObj = Helper.GetObject(t, ms.ToArray());
-					return t;
+					idDict[data[0]].Item2.DynamicInvoke(dataObj);
+					return null;
 				}
 				case RequestReceptionID: {
 					byte requestID = ms.ToArray()[0];
@@ -88,11 +90,8 @@ namespace Igor.TCP {
 			}
 		}
 
-		public void DefineCustomDataTypeForID<TData>(byte ID) {
-			idDict.Add(ID, typeof(TData));
-		}
-		public void DefineCustomDataTypeForID(byte ID, Type t) {
-			idDict.Add(ID, t);
+		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData> callback) {
+			idDict.Add(ID, new Tuple<Type, Delegate>(typeof(TData),callback));
 		}
 
 		public void RemoveCustomDefinitionForID(byte ID) {
