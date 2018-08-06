@@ -57,6 +57,51 @@ namespace Igor.TCP {
 			}
 			return bytes;
 		}
+	
+	
+		internal static object GetObject(Type t, byte[] bytes) {
+			object obj;
+
+			if (t == typeof(bool)) {
+				obj = BitConverter.ToBoolean(bytes,0);
+			}
+			else if (t == typeof(char)) {
+				obj = BitConverter.ToChar(bytes, 0);
+			}
+			else if (t == typeof(double)) {
+				obj = BitConverter.ToDouble(bytes, 0);
+			}
+			else if (t == typeof(float)) {
+				obj = BitConverter.ToSingle(bytes, 0);
+			}
+			else if (t == typeof(int)) {
+				obj = BitConverter.ToInt32(bytes, 0);
+			}
+			else if (t == typeof(long)) {
+				obj = BitConverter.ToInt64(bytes, 0);
+			}
+			else if (t == typeof(short)) {
+				obj = BitConverter.ToInt16(bytes, 0);
+			}
+			else if (t == typeof(uint)) {
+				obj = BitConverter.ToUInt32(bytes, 0);
+			}
+			else if (t == typeof(ulong)) {
+				obj = BitConverter.ToUInt64(bytes, 0);
+			}
+			else if (t == typeof(ushort)) {
+				obj = BitConverter.ToUInt16(bytes, 0);
+			}
+			else {
+				using (MemoryStream ms = new MemoryStream()) {
+					ms.Write(bytes, 0, bytes.Length);
+					ms.Seek(0, SeekOrigin.Begin);
+					obj = bf.Deserialize(ms);
+				}
+			}
+			return obj;
+		}
+
 
 		public static byte[] GetBytesFromObject<T>(byte customID, object obj) {
 			byte[] bytes = GetBytesFromObject<T>(obj);

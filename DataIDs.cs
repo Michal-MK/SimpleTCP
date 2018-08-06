@@ -54,10 +54,12 @@ namespace Igor.TCP {
 				}
 				case UserDefined: {
 					byte[] data = ms.ToArray();
+					Type t = idDict[data[0]];
+					ms.Flush();
 					ms.Write(data, 1, data.Length - 1);
 					ms.Seek(0, SeekOrigin.Begin);
-					dataObj = bf.Deserialize(ms);
-					return idDict[data[0]];
+					dataObj = Helper.GetObject(t, ms.ToArray());
+					return t;
 				}
 				case RequestReceptionID: {
 					byte requestID = ms.ToArray()[0];
