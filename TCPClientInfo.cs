@@ -8,6 +8,9 @@ namespace Igor.TCP {
 		public bool isServer;
 		public IPAddress clientAddress;
 
+		/// <summary>
+		/// Initialize new ClientInfo
+		/// </summary>
 		public TCPClientInfo(bool isServer, IPAddress clientAddress) {
 			this.isServer = isServer;
 			this.clientAddress = clientAddress;

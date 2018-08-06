@@ -12,56 +12,58 @@ namespace Igor.TCP {
 	public class TCPServer : TCPConnection {
 
 		private TcpClient connected;
-		public RequestManager requestHandler { get; }
+
+		internal RequestManager requestHandler { get; }
 		public ResponseManager responseHandler { get; }
 
 		public event EventHandler<TCPServer> OnConnectionEstablished;
 		public event EventHandler<TCPResponse> OnRequestHandeled;
 
+		/// <summary>
+		/// Initialize new Server
+		/// </summary>
 		public TCPServer() : base(true) {
 			requestHandler = new RequestManager(this);
 			responseHandler = new ResponseManager(dataIDs);
 		}
 
+		/// <summary>
+		/// Start server using specified 'port' and internally found IP
+		/// </summary>
 		public void Start(ushort port) {
-			Thread t = new Thread(() => { StartServer(port); });
+			Thread t = new Thread(() => { StartServer(Helper.GetActivePIv4Address(), port); }) { Name = "Actual server" };
 			t.Start();
 		}
 
+		/// <summary>
+		/// Start server using specified 'port' and explicitly specified 'ipAddress'
+		/// </summary>
 		public void Start(string ipAddress, ushort port) {
-			Thread t = new Thread(() => { StartServer(ipAddress, port); });
+			Thread t = new Thread(() => { StartServer(IPAddress.Parse(ipAddress), port); }) { Name = "Actual server" };
 			t.Start();
 		}
 
+		/// <summary>
+		/// Stops listening for incomming data
+		/// </summary>
 		public void StopListening() {
 			listeningForData = false;
 		}
 
-		private void StartServer(ushort port) {
-			IPAddress addr = Helper.GetActivePIv4Address();
-			Console.WriteLine(addr);
-			TcpListener listener = new TcpListener(addr, port);
+
+		private void StartServer(IPAddress address, ushort port) {
+			Console.WriteLine(address);
+			TcpListener listener = new TcpListener(address, port);
 			listener.Start();
 			connected = listener.AcceptTcpClient();
 			stream = connected.GetStream();
 			Console.WriteLine("Client connected");
 			listeningForData = true;
 			OnConnectionEstablished?.Invoke(this, this);
-			DataReception();
+			new Thread(new ThreadStart(DataReception)) { Name = "DataReception" }.Start();
 		}
 
-		private void StartServer(string ipAddress, ushort port) {
-			IPAddress addr = IPAddress.Parse(ipAddress);
-			Console.WriteLine(addr);
-			TcpListener listener = new TcpListener(addr, port);
-			listener.Start();
-			connected = listener.AcceptTcpClient();
-			stream = connected.GetStream();
-			Console.WriteLine("Client connected");
-			listeningForData = true;
-			OnConnectionEstablished?.Invoke(this, this);
-			DataReception();
-		}
+
 
 		public void DefineRequestResponseEntry<TData>(byte ID, Func<TData> function) {
 			dataIDs.requestDict.Add(ID, typeof(TData));
@@ -89,7 +91,9 @@ namespace Igor.TCP {
 			dataIDs.responseDict.Remove(ID);
 		}
 
-
+		/// <summary>
+		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
+		/// </summary>
 		public async Task RaiseRequestAsync(byte ID) {
 			TCPResponse data = await requestHandler.Request(ID);
 			OnRequestHandeled?.Invoke(ID, data);

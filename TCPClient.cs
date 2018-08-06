@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 #if UNITY_STANDALONE || UNITY_ANDROID
 using UnityEngine;
@@ -17,17 +18,22 @@ namespace Igor.TCP {
 		public event EventHandler<TCPResponse> OnRequestHandeled;
 
 
-		public RequestManager requestHandler { get; }
+		internal RequestManager requestHandler { get; }
 		public ResponseManager responseHandler { get; }
 
 
 		public bool isListeningForData { get { return listeningForData; } }
 
+		/// <summary>
+		/// Initialize new TCPClient by connectiong to 'ipAddress' on port 'port'
+		/// </summary>
 		public TCPClient(string ipAddress, ushort port) : this(
 			new ConnectionData(ipAddress, port)) {
 		}
 
-
+		/// <summary>
+		/// Initialize new TCPClient by connectiong to a server defined in 'data'
+		/// </summary>
 		public TCPClient(ConnectionData data) : base(false) {
 			this.port = data.port;
 			if (IPAddress.TryParse(data.ipAddress, out address)) {
@@ -36,6 +42,8 @@ namespace Igor.TCP {
 				stream = server.GetStream();
 				requestHandler = new RequestManager(this);
 				responseHandler = new ResponseManager(dataIDs);
+				new Thread(new ThreadStart(DataReception)) { Name = "DataReception" }.Start();
+
 #if UNITY_ANDROID || UNITY_STANDALONE
 				Debug.Log("Connection Established");
 #else
@@ -74,18 +82,17 @@ namespace Igor.TCP {
 			dataIDs.responseDict.Remove(ID);
 		}
 
-
+		/// <summary>
+		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
+		/// </summary>
 		public async Task RaiseRequestAsync(byte ID) {
 			TCPResponse data = await requestHandler.Request(ID);
 			OnRequestHandeled?.Invoke(ID, data);
 		}
 
-
-		public void ListenForData() {
-			listeningForData = true;
-			DataReception();
-		}
-
+		/// <summary>
+		/// Stops listening for incomming data
+		/// </summary>
 		public void StopListening() {
 			listeningForData = false;
 		}

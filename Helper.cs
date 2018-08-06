@@ -7,7 +7,10 @@ using System.Runtime.Serialization.Formatters.Binary;
 namespace Igor.TCP {
 	public static class Helper {
 		private static BinaryFormatter bf = new BinaryFormatter();
-
+		/// <summary>
+		/// Returns active IPv4 Address of this computer
+		/// </summary>
+		/// <returns></returns>
 		public static IPAddress GetActivePIv4Address() {
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
 				socket.Connect("8.8.8.8", 65530);
@@ -16,6 +19,9 @@ namespace Igor.TCP {
 			}
 		}
 
+		/// <summary>
+		/// Wrapper to all object to byte[] conversions
+		/// </summary>
 		public static byte[] GetBytesFromObject<T>(object obj) {
 			byte[] bytes;
 
@@ -102,13 +108,24 @@ namespace Igor.TCP {
 			return obj;
 		}
 
-
+		/// <summary>
+		/// Wrapper to all object to byte[] conversions, includes request ID 'customID' as first element of the array
+		/// </summary>
 		public static byte[] GetBytesFromObject<T>(byte customID, object obj) {
 			byte[] bytes = GetBytesFromObject<T>(obj);
 			byte[] result = new byte[1 + bytes.Length];
 			result[0] = customID;
 			Array.Copy(bytes, 0, result, 1, bytes.Length);
 			return result;
+		}
+
+
+		internal static void SaveArrayToFile(string file, byte[] array) {
+			using(StreamWriter sw = File.CreateText(file)) {
+				foreach (byte b in array) {
+					sw.Write(b + ",");
+				}
+			}
 		}
 	}
 }
