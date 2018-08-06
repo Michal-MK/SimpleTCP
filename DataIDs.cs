@@ -55,11 +55,11 @@ namespace Igor.TCP {
 				case UserDefined: {
 					byte[] data = ms.ToArray();
 					Type t = idDict[data[0]].Item1;
-					using(MemoryStream internalMS = new MemoryStream()) {
+					using (MemoryStream internalMS = new MemoryStream()) {
 						internalMS.Write(data, 1, data.Length - 1);
+						internalMS.Seek(0, SeekOrigin.Begin);
+						dataObj = Helper.GetObject(t, internalMS.ToArray());
 					}
-					ms.Seek(0, SeekOrigin.Begin);
-					dataObj = Helper.GetObject(t, ms.ToArray());
 					idDict[data[0]].Item2.DynamicInvoke(dataObj);
 					return null;
 				}

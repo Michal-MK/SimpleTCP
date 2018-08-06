@@ -32,6 +32,7 @@ namespace Igor.TCP {
 			using (MemoryStream ms = new MemoryStream()) {
 				bf.Serialize(ms, data);
 				byte[] bytes = ms.ToArray();
+				File.WriteAllBytes(@"D:\data.data", bytes);
 				Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
 				SendData(DataIDs.TCPDataID, bytes);
 			}
@@ -56,8 +57,9 @@ namespace Igor.TCP {
 			packetSize.CopyTo(merged, 0);
 			merged[packetSize.Length] = dataID;
 			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY);
-
-			stream.Write(merged, 0, merged.Length);
+			lock (stream) {
+				stream.Write(merged, 0, merged.Length);
+			}
 		}
 
 		public void SendData(byte dataID, byte requestID) {
@@ -68,7 +70,9 @@ namespace Igor.TCP {
 			merged[packetSize.Length] = dataID;
 			merged[packetSize.Length + 1] = requestID;
 
-			stream.Write(merged, 0, merged.Length);
+			lock (stream) {
+				stream.Write(merged, 0, merged.Length);
+			}
 		}
 
 		internal void SendData(byte packetID, byte requestID, byte[] data) {
@@ -80,7 +84,9 @@ namespace Igor.TCP {
 			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = requestID;
 			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + 1);
 
-			stream.Write(merged, 0, merged.Length);
+			lock (stream) {
+				stream.Write(merged, 0, merged.Length);
+			}
 		}
 
 
@@ -134,7 +140,15 @@ namespace Igor.TCP {
 				ms.Write(data, 0, data.Length);
 				ms.Seek(0, SeekOrigin.Begin);
 
-				return dataIDs.IndetifyID(packetID, out dataObj, ms);
+				try {
+					return dataIDs.IndetifyID(packetID, out dataObj, ms);
+				}
+				catch (Exception e) {
+					Console.WriteLine(e.Message);
+					File.WriteAllBytes(@"D:\data.data", ms.ToArray());
+					dataObj = null;
+					return null;
+				}
 			}
 		}
 

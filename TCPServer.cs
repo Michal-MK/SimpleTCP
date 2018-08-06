@@ -18,7 +18,7 @@ namespace Igor.TCP {
 		public event EventHandler<TCPServer> OnConnectionEstablished;
 		public event EventHandler<TCPResponse> OnRequestHandeled;
 
-		public TCPServer(): base(true) {
+		public TCPServer() : base(true) {
 			requestHandler = new RequestManager(this);
 			responseHandler = new ResponseManager(dataIDs);
 		}
@@ -28,12 +28,30 @@ namespace Igor.TCP {
 			t.Start();
 		}
 
+		public void Start(string ipAddress, ushort port) {
+			Thread t = new Thread(() => { StartServer(ipAddress, port); });
+			t.Start();
+		}
+
 		public void StopListening() {
 			listeningForData = false;
 		}
 
 		private void StartServer(ushort port) {
 			IPAddress addr = Helper.GetActivePIv4Address();
+			Console.WriteLine(addr);
+			TcpListener listener = new TcpListener(addr, port);
+			listener.Start();
+			connected = listener.AcceptTcpClient();
+			stream = connected.GetStream();
+			Console.WriteLine("Client connected");
+			listeningForData = true;
+			OnConnectionEstablished?.Invoke(this, this);
+			DataReception();
+		}
+
+		private void StartServer(string ipAddress, ushort port) {
+			IPAddress addr = IPAddress.Parse(ipAddress);
 			Console.WriteLine(addr);
 			TcpListener listener = new TcpListener(addr, port);
 			listener.Start();
