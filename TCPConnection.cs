@@ -19,7 +19,7 @@ namespace Igor.TCP {
 		public event EventHandler<Int64> OnInt64Received;
 		internal event EventHandler<TCPResponse> _OnResponse;
 
-		internal DataIDs dataIDs;
+		public DataIDs dataIDs;
 
 		internal TCPConnection(bool isServer) {
 			dataIDs = new DataIDs(this);

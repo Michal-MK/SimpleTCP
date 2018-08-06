@@ -36,13 +36,14 @@ namespace Igor.TCP {
 		internal void HandleRequest(TCPRequest request, object obj) {
 			BinaryFormatter bf = new BinaryFormatter();
 			//if (verifiedConnections[request.packetID] == 0) {
-			TCPResponse resp = GetResponse(request.packetID);
 			using (MemoryStream internalMS = new MemoryStream()) {
 				bf.Serialize(internalMS, obj);
-				resp.rawData = internalMS.ToArray();
-				internalMS.Seek(0, SeekOrigin.Begin);
-				bf.Serialize(internalMS, resp);
-				dataIDs.connection.SendData(DataIDs.ResponseReceptionID, internalMS.ToArray());
+				byte[] rawData = internalMS.ToArray();
+				byte[] data = new byte[rawData.Length + DataIDs.PACKET_ID_COMPLEXITY];
+				data[0] = request.packetID;
+				rawData.CopyTo(data, 1);
+
+				dataIDs.connection.SendData(DataIDs.ResponseReceptionID, data);
 				//verifiedConnections[resp.packetID] = 1;
 			}
 			//}

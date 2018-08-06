@@ -4,16 +4,19 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
-	internal class DataIDs {
+	public class DataIDs {
 		public const int PACKET_ID_COMPLEXITY = 1;
 		public const byte TCPDataID = 0;
 		public const byte StringID = 32;
 		public const byte LongID = 64;
+		public const byte UserDefined = 128;
+		public const byte ServerStop = 250;
+		public const byte ClientDisconnected = 251;
 		public const byte RequestReceptionID = 254;
 		public const byte ResponseReceptionID = 255;
 
 
-		internal readonly Dictionary<byte, Delegate> idDict = new Dictionary<byte, Delegate>();
+		internal readonly Dictionary<byte, Type> idDict = new Dictionary<byte, Type>();
 
 
 		internal readonly Dictionary<byte, Type> requestDict = new Dictionary<byte, Type>();
@@ -49,36 +52,49 @@ namespace Igor.TCP {
 					dataObj = BitConverter.ToInt64(ms.ToArray(), 0);
 					return typeof(Int64);
 				}
+				case UserDefined: {
+					byte[] data = ms.ToArray();
+					ms.Write(data, 1, data.Length - 1);
+					ms.Seek(0, SeekOrigin.Begin);
+					dataObj = bf.Deserialize(ms);
+					return idDict[data[0]];
+				}
 				case RequestReceptionID: {
-					TCPRequest request = (TCPRequest)bf.Deserialize(ms);
-					if (!idDict.ContainsKey(request.packetID)) {
-						throw new Exception(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request.packetID));
+					byte requestID = ms.ToArray()[0];
+					TCPRequest request = new TCPRequest(requestID);
+
+					if (!responseDict.ContainsKey(requestID)) {
+						throw new Exception(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request));
 					}
-					object obj = idDict[request.packetID].DynamicInvoke(null);
+					object obj = responseDict[requestID].DynamicInvoke(null);
 					responseManager.HandleRequest(request, obj);
 					dataObj = null;
 					return typeof(TCPRequest);
 				}
 				case ResponseReceptionID: {
-					dataObj = bf.Deserialize(ms);
+					byte[] dataReceived = ms.ToArray();
+					TCPResponse response = new TCPResponse(dataReceived[0]);
+					response.rawData = new byte[dataReceived.Length - 1];
+					Array.Copy(dataReceived, 1, response.rawData, 0, dataReceived.Length - 1);
+					dataObj = response;
 					return typeof(TCPResponse);
 				}
 
 				default: {
-					throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",
-						ID[0]));
+					throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",	ID[0]));
 				}
 			}
 		}
 
-		internal void AddNew<TData>(byte ID, Func<TData> func) {
-			idDict.Add(ID, func);
-			responseManager.AddType(ID, typeof(TData));
+		public void DefineCustomDataTypeForID<TData>(byte ID) {
+			idDict.Add(ID, typeof(TData));
+		}
+		public void DefineCustomDataTypeForID(byte ID, Type t) {
+			idDict.Add(ID, t);
 		}
 
-		internal void RemoveFunc(byte ID) {
+		public void RemoveCustomDefinitionForID(byte ID) {
 			idDict.Remove(ID);
-			responseManager.RemoveType(ID);
 		}
 	}
 }

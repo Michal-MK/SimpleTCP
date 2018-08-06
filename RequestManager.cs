@@ -21,16 +21,17 @@ namespace Igor.TCP {
 		private TCPResponse currentResponseObject;
 		internal async Task<TCPResponse> Request(byte ID) {
 			evnt.Reset();
-			if (!connection.dataIDs.idDict.ContainsKey(ID)) {
+			if (!connection.dataIDs.requestDict.ContainsKey(ID)) {
 				throw new Exception(string.Format("Byte {0} is not a valid Request identifier, Call 'DefineRequestResponseID<TData>(byte, Func<TData>)' to set it + its response datatype", ID));
 			}
 			return await Task.Run(delegate () {
 				//if(verifiedConnections[ID] == 0) {
-					TCPRequest request = new TCPRequest(ID/*, new TCPClientInfo(connection.isServer, Helper.GetActivePIv4Address())*/);
+					//TCPRequest request = new TCPRequest(ID/*, new TCPClientInfo(connection.isServer, Helper.GetActivePIv4Address())*/);
+					byte request = ID;
 					using (MemoryStream ms = new MemoryStream()) {
 						BinaryFormatter bf = new BinaryFormatter();
 						bf.Serialize(ms, request);
-						connection.SendData(DataIDs.RequestReceptionID, ms.ToArray());
+						connection.SendData(DataIDs.RequestReceptionID, request/*ms.ToArray()*/);
 						connection._OnResponse += Connection_OnResponse;
 						evnt.Wait();
 						//verifiedConnections[currentResponseObject.packetID] = 1;
