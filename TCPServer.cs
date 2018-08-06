@@ -2,17 +2,25 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
+
+#if UNITY_STANDALONE || UNITY_ANDROID
+using UnityEngine;
+#endif
 
 namespace Igor.TCP {
 	public class TCPServer : TCPConnection {
 
 		private TcpClient connected;
-		public TCPRequest requestHandler { get; }
+		public RequestManager requestHandler { get; }
+		public ResponseManager responseHandler { get; }
 
 		public event EventHandler<TCPServer> OnConnectionEstablished;
+		public event EventHandler<TCPResponse> OnRequestHandeled;
 
 		public TCPServer(): base(true) {
-			requestHandler = new TCPRequest(this);
+			requestHandler = new RequestManager(this);
+			responseHandler = new ResponseManager(dataIDs);
 		}
 
 		public void Start(ushort port) {
@@ -25,14 +33,7 @@ namespace Igor.TCP {
 		}
 
 		private void StartServer(ushort port) {
-			IPAddress addr;
-			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
-				socket.Connect("8.8.8.8", 65530);
-				IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-				addr = endPoint.Address;
-			}
-			bf.Binder = new MyBinder();
-
+			IPAddress addr = Helper.GetActivePIv4Address();
 			Console.WriteLine(addr);
 			TcpListener listener = new TcpListener(addr, port);
 			listener.Start();
@@ -44,20 +45,36 @@ namespace Igor.TCP {
 			DataReception();
 		}
 
-
-		public async void RaiseRequest<T>(byte ID) {
-			T data = await requestHandler.Request<T>(ID);
-			OnRequestFullfilled(ID, data);
+		public void DefineRequestResponseEntry<TData>(byte ID, Func<TData> function) {
+			dataIDs.requestDict.Add(ID, typeof(TData));
+			dataIDs.responseDict.Add(ID, function);
 		}
 
-		private void OnRequestFullfilled<T>(object sender, T e) {
-			int id = (byte)sender;
-			switch (id) {
-				case 128: {
-					Console.WriteLine(e.ToString());
-					break;
-				}
-			}
+		public void CancelRequestResponseID(byte ID) {
+			dataIDs.requestDict.Remove(ID);
+			dataIDs.responseDict.Remove(ID);
+		}
+
+		public void DefineRequestEntry<TData>(byte ID) {
+			dataIDs.requestDict.Add(ID, typeof(TData));
+		}
+
+		public void CancelRequestID(byte ID) {
+			dataIDs.requestDict.Remove(ID);
+		}
+
+		public void DefineResponseEntry<TData>(byte ID, Func<TData> function) {
+			dataIDs.responseDict.Add(ID, function);
+		}
+
+		public void CancelResponseID(byte ID) {
+			dataIDs.responseDict.Remove(ID);
+		}
+
+
+		public async Task RaiseRequestAsync(byte ID) {
+			TCPResponse data = await requestHandler.Request(ID);
+			OnRequestHandeled?.Invoke(ID, data);
 		}
 	}
 }

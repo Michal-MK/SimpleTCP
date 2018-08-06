@@ -17,51 +17,71 @@ namespace Igor.TCP {
 		public event EventHandler<TCPData> OnTCPDataReceived;
 		public event EventHandler<string> OnStringReceived;
 		public event EventHandler<Int64> OnInt64Received;
-		public event EventHandler<object> OnRequestAnswered;
+		internal event EventHandler<TCPResponse> _OnResponse;
 
-		internal ServerIDs dataIDs;
+		internal DataIDs dataIDs;
 
 		internal TCPConnection(bool isServer) {
-			dataIDs = new ServerIDs(this);
+			dataIDs = new DataIDs(this);
 			this.isServer = isServer;
+			bf.Binder = new MyBinder();
 		}
 
 		public void SendData(TCPData data) {
 			using (MemoryStream ms = new MemoryStream()) {
 				bf.Serialize(ms, data);
 				byte[] bytes = ms.ToArray();
-				Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + ServerIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-				SendData(ServerIDs.TCPDataID, bytes);
+				Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+				SendData(DataIDs.TCPDataID, bytes);
 			}
 		}
 
 		public void SendData(string data) {
 			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
-			Console.WriteLine("Sending data of type string of length {0}", bytes.Length + ServerIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-			SendData(ServerIDs.StringID, bytes);
+			Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+			SendData(DataIDs.StringID, bytes);
 		}
 
 		public void SendData(Int64 data) {
 			byte[] bytes = BitConverter.GetBytes(data);
-			Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + ServerIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-			SendData(ServerIDs.LongID, bytes);
+			Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+			SendData(DataIDs.LongID, bytes);
 		}
 
 		public void SendData(byte dataID, byte[] data) {
 			byte[] packetSize = BitConverter.GetBytes(data.LongLength);
-			byte packetID = dataID;
-			byte[] merged = new byte[data.Length + ServerIDs.PACKET_ID_COMPLEXITY + packetSize.Length];
+			byte[] merged = new byte[data.Length + DataIDs.PACKET_ID_COMPLEXITY + packetSize.Length];
 
 			packetSize.CopyTo(merged, 0);
-			merged[packetSize.Length] = packetID;
-			data.CopyTo(merged, packetSize.Length + ServerIDs.PACKET_ID_COMPLEXITY);
+			merged[packetSize.Length] = dataID;
+			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY);
 
 			stream.Write(merged, 0, merged.Length);
 		}
 
-		internal NetworkStream GetStream() {
-			return stream;
+		public void SendData(byte dataID, byte requestID) {
+			byte[] packetSize = BitConverter.GetBytes(1L);
+			byte[] merged = new byte[DataIDs.PACKET_ID_COMPLEXITY + packetSize.Length + 1];
+
+			packetSize.CopyTo(merged, 0);
+			merged[packetSize.Length] = dataID;
+			merged[packetSize.Length + 1] = requestID;
+
+			stream.Write(merged, 0, merged.Length);
 		}
+
+		internal void SendData(byte packetID, byte requestID, byte[] data) {
+			byte[] packetSize = BitConverter.GetBytes(data.LongLength);
+			byte[] merged = new byte[DataIDs.PACKET_ID_COMPLEXITY + packetSize.Length + 1 + data.Length];
+
+			packetSize.CopyTo(merged, 0);
+			merged[packetSize.Length] = packetID;
+			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = requestID;
+			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + 1);
+
+			stream.Write(merged, 0, merged.Length);
+		}
+
 
 		protected void DataReception() {
 			while (listeningForData) {
@@ -75,8 +95,11 @@ namespace Igor.TCP {
 				else if (data == typeof(Int64)) {
 					OnInt64Received(this, (Int64)receivedData);
 				}
-				else if(data == typeof(TCPResponse)) {
-					OnRequestAnswered(this, receivedData);
+				else if (data == typeof(TCPResponse)) {
+					_OnResponse(this, (TCPResponse)receivedData);
+				}
+				else if (data == typeof(TCPRequest)) {
+					continue;
 				}
 			}
 		}
@@ -91,9 +114,9 @@ namespace Igor.TCP {
 				}
 				totalReceived = 0;
 				Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
-				byte[] packetID = new byte[ServerIDs.PACKET_ID_COMPLEXITY];
-				while (totalReceived < ServerIDs.PACKET_ID_COMPLEXITY) {
-					totalReceived += stream.Read(packetID, 0, ServerIDs.PACKET_ID_COMPLEXITY);
+				byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
+				while (totalReceived < DataIDs.PACKET_ID_COMPLEXITY) {
+					totalReceived += stream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
 				}
 
 				Console.WriteLine("Waiting for Data 0/" + toReceive + " bytes");
@@ -119,79 +142,6 @@ namespace Igor.TCP {
 				BinaryFormatter bf = new BinaryFormatter();
 				bf.Serialize(ms, obj);
 				return ms.ToArray();
-			}
-		}
-
-		internal class ServerIDs {
-
-
-			public const int PACKET_ID_COMPLEXITY = 1;
-			public const byte TCPDataID = 0;
-			public const byte StringID = 32;
-			public const byte LongID = 64;
-			public const byte TestID = 128;
-
-
-			internal readonly Dictionary<byte, Delegate> idDict = new Dictionary<byte, Delegate>();
-
-			private BinaryFormatter bf = new BinaryFormatter();
-			private TCPConnection connection;
-
-
-			internal ServerIDs(TCPConnection connection) {
-				this.connection = connection;
-			}
-
-			private byte ParseID(byte[] packetID) {
-				return packetID[0];
-			}
-
-			public Type IndetifyID(byte[] ID, out object dataObj, MemoryStream ms) {
-				byte id = ParseID(ID);
-				switch (id) {
-					case TCPDataID: {
-						dataObj = bf.Deserialize(ms);
-						return typeof(TCPData);
-					}
-					case StringID: {
-						dataObj = System.Text.Encoding.UTF8.GetString(ms.ToArray());
-						return typeof(string);
-					}
-					case LongID: {
-						dataObj = BitConverter.ToInt64(ms.ToArray(), 0);
-						return typeof(Int64);
-					}
-					case TestID: {
-						Type t;
-						if (connection.OnRequestAnswered == null) {
-							object obj = idDict[id].DynamicInvoke(null);
-							using (MemoryStream internalMS = new MemoryStream()) {
-								bf.Serialize(internalMS, obj);
-								connection.SendData(id, internalMS.ToArray());
-							}
-							dataObj = null;
-							t = null;
-						}
-						else {
-							dataObj = bf.Deserialize(ms);
-							t = typeof(TCPResponse);
-						}
-						return t;
-					}
-
-					default: {
-						throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",
-							ID[0]));
-					}
-				}
-			}
-
-			internal void AddNew<TData>(byte ID, Func<TData> func) {
-				idDict.Add(ID, func);
-			}
-
-			internal void RemoveFunc(byte ID) {
-				idDict.Remove(ID);
 			}
 		}
 	}
