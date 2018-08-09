@@ -1,9 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
+	/// <summary>
+	/// Class handing requests from the other side
+	/// </summary>
 	public class ResponseManager {
 
 		internal DataIDs dataIDs;
@@ -23,6 +25,14 @@ namespace Igor.TCP {
 
 				dataIDs.connection.SendData(DataIDs.ResponseReceptionID, data);
 			}
+		}
+
+		internal void HandleRequest(TCPRequest request, byte[] data_ready) {
+			byte[] data = new byte[data_ready.Length + DataIDs.PACKET_ID_COMPLEXITY];
+			data[0] = request.packetID;
+			data_ready.CopyTo(data, 1);
+
+			dataIDs.connection.SendData(DataIDs.ResponseReceptionID, data);
 		}
 
 		/// <summary>

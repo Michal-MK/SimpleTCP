@@ -2,8 +2,12 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Reflection;
 
-namespace Igor.TCP { 
+namespace Igor.TCP {
+	/// <summary>
+	/// Class holding packet IDs and received data resoluton and unpacking
+	/// </summary>
 	public class DataIDs {
 		/// <summary>
 		/// How many bytes are used to identify a packet
@@ -26,12 +30,14 @@ namespace Igor.TCP {
 		/// </summary>
 		public const byte UserDefined = 128;
 		/// <summary>
-		/// NIY
+		/// NIY, no guarantee of safety when using this TODO
 		/// </summary>
+		//TODO
 		public const byte ServerStop = 250;
 		/// <summary>
-		/// NIY
+		/// NIY, no guarantee of safety when using this TODO
 		/// </summary>
+		//TODO
 		public const byte ClientDisconnected = 251;
 		/// <summary>
 		/// Packet ID for handling requests
@@ -42,8 +48,14 @@ namespace Igor.TCP {
 		/// </summary>
 		internal const byte ResponseReceptionID = 255;
 
+		/// <summary>
+		/// Packet ID for handling property synchronization
+		/// </summary>
+		public const byte PropertySyncID = 249;
 
-		internal readonly Dictionary<byte, Tuple<Type, Delegate>> idDict = new Dictionary<byte, Tuple<Type,Delegate>>();
+
+		internal readonly Dictionary<byte, Tuple<Type, Delegate>> idDict = new Dictionary<byte, Tuple<Type, Delegate>>();
+		internal readonly Dictionary<byte, Tuple<object, PropertyInfo>> syncProps = new Dictionary<byte, Tuple<object, PropertyInfo>>();
 
 
 		internal readonly Dictionary<byte, Type> requestDict = new Dictionary<byte, Type>();
@@ -68,7 +80,7 @@ namespace Igor.TCP {
 			byte id = ParseID(ID);
 			switch (id) {
 				case TCPDataID: {
-					using(MemoryStream ms = new MemoryStream()) {
+					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(data, 0, data.Length);
 						ms.Seek(0, SeekOrigin.Begin);
 						Helper.SaveArrayToFile(@"D:\data.txt", ms.ToArray());
@@ -102,20 +114,32 @@ namespace Igor.TCP {
 						throw new Exception(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request));
 					}
 					object obj = responseDict[requestID].DynamicInvoke(null);
-					responseManager.HandleRequest(request, obj);
+					if (obj is byte[]) {
+						responseManager.HandleRequest(request, obj as byte[]);
+					}
+					else {
+						responseManager.HandleRequest(request, obj);
+					}
 					dataObj = null;
 					return typeof(TCPRequest);
 				}
 				case ResponseReceptionID: {
-					TCPResponse response = new TCPResponse(data[0]);
-					response.rawData = new byte[data.Length - 1];
+					TCPResponse response = new TCPResponse(data[0]) {
+						rawData = new byte[data.Length - 1]
+					};
 					Array.Copy(data, 1, response.rawData, 0, data.Length - 1);
 					dataObj = response;
 					return typeof(TCPResponse);
 				}
-
+				case PropertySyncID: {
+					byte[] realData = new byte[data.Length - 1];
+					Array.Copy(data, 1, realData, 0, realData.Length);
+					syncProps[data[0]].Item2.SetValue(syncProps[data[0]].Item1, Helper.GetObject(syncProps[data[0]].Item2.PropertyType, realData));
+					dataObj = null;
+					return typeof(TCPRequest);
+				}
 				default: {
-					throw new NotSupportedException(string.Format("This identifier is not supported {{0}}",	ID[0]));
+					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID[0]));
 				}
 			}
 		}
@@ -124,7 +148,7 @@ namespace Igor.TCP {
 		/// Register custom packet with 'ID' that will carry data of 'TData' type, delivered via 'callback' event
 		/// </summary>
 		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData> callback) {
-			idDict.Add(ID, new Tuple<Type, Delegate>(typeof(TData),callback));
+			idDict.Add(ID, new Tuple<Type, Delegate>(typeof(TData), callback));
 		}
 
 		/// <summary>

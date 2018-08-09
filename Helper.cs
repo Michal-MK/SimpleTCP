@@ -5,6 +5,9 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
+	/// <summary>
+	/// Static class constainging useful methods for data transimission
+	/// </summary>
 	public static class Helper {
 		private static BinaryFormatter bf = new BinaryFormatter();
 		/// <summary>

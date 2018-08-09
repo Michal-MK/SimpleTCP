@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	internal class RequestManager {
+	internal class RequestManager : IDisposable{
 		internal TCPConnection connection;
 		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
 
@@ -35,5 +35,9 @@ namespace Igor.TCP {
 		}
 
 		#endregion
+
+		public void Dispose() {
+			evnt.Dispose();
+		}
 	}
 }

@@ -2,19 +2,11 @@
 
 namespace Igor.TCP {
 	[Serializable]
-	public class TCPRequest : IRequest {
-		public TCPRequest(byte packetID/*, TCPClientInfo info*/) {
+	internal class TCPRequest {
+		internal TCPRequest(byte packetID) {
 			this.packetID = packetID;
-			//this.info = info;
 		}
 
-		public byte packetID { get; internal set; }
-
-		//public TCPClientInfo info { get; internal set; }
-	}
-
-	public interface IRequest {
-		byte packetID { get; }
-		//TCPClientInfo info { get; }
+		internal byte packetID { get; set; }
 	}
 }
