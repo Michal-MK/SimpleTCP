@@ -4,28 +4,30 @@ using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Threading;
-#if UNITY_ANDROID || UNITY_STANDALONE
-using UnityEngine;
-#endif
-
 
 namespace Igor.TCP {
 	/// <summary>
 	/// Base class for all client and server
 	/// </summary>
-	public abstract class TCPConnection : IDisposable {
+	public class TCPConnection : IDisposable {
+
 		private BinaryFormatter bf = new BinaryFormatter();
 		/// <summary>
 		/// Stream on which all transimssion happens
 		/// </summary>
-		protected internal NetworkStream stream;
+		internal NetworkStream stream;
 
 		/// <summary>
 		/// Is client listening for incomming data
 		/// </summary>
-		protected bool listeningForData;
+		public bool listeningForData {get; internal set; } = true;
 
 		internal bool isServer;
+
+		/// <summary>
+		/// Print debug information to console
+		/// </summary>
+		public bool debugPrints { get; set; }
 
 		/// <summary>
 		/// Called when successfully received data from <see cref="DataIDs.TCPDataID"></see> marked packet
@@ -44,6 +46,16 @@ namespace Igor.TCP {
 
 		internal event EventHandler<TCPResponse> _OnResponse;
 
+
+		internal RequestManager requestHandler { get; }
+
+		/// <summary>
+		/// Access to datatypes for custom packets
+		/// </summary>
+		public ResponseManager responseHandler { get; }
+
+
+
 		/// <summary>
 		/// Define simple data packets and get internal/externaly defined packet IDs
 		/// </summary>
@@ -51,16 +63,14 @@ namespace Igor.TCP {
 
 		private Queue<Tuple<byte, byte[]>> queuedBytes = new Queue<Tuple<byte, byte[]>>();
 
-		/// <summary>
-		/// Print debug information to console
-		/// </summary>
-		public bool debugPrints { get; set; }
-
-		internal TCPConnection(bool isServer) {
+		internal TCPConnection(TcpClient baseClient, bool isServer) {
+			stream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
 			this.isServer = isServer;
 			bf.Binder = new MyBinder();
 			new Thread(new ThreadStart(SendDataFromQueue)) { Name = "Sender Thread" }.Start();
+			requestHandler = new RequestManager(this);
+			responseHandler = new ResponseManager(dataIDs);
 		}
 
 		/// <summary>
@@ -71,11 +81,7 @@ namespace Igor.TCP {
 				bf.Serialize(ms, data);
 				byte[] bytes = ms.ToArray();
 				if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-					Debug.Log(string.Format("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64)));
-#else
 					Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-#endif
 				}
 				SendData(DataIDs.TCPDataID, bytes);
 			}
@@ -87,11 +93,7 @@ namespace Igor.TCP {
 		public void SendData(string data) {
 			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
 			if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-				Debug.Log(string.Format("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64)));
-#else
 				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-#endif
 			}
 			SendData(DataIDs.StringID, bytes);
 		}
@@ -102,11 +104,7 @@ namespace Igor.TCP {
 		public void SendData(Int64 data) {
 			byte[] bytes = BitConverter.GetBytes(data);
 			if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-				Debug.Log(string.Format("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64)));
-#else
 				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
-#endif
 			}
 			SendData(DataIDs.Int64ID, bytes);
 		}
@@ -190,11 +188,7 @@ namespace Igor.TCP {
 
 		private Type ReceiveData(out object dataObj) {
 			if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-				Debug.Log("Waiting for next packet...");
-#else
 				Console.WriteLine("Waiting for next packet...");
-#endif
 			}
 			byte[] packetSize = new byte[8];
 			byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
@@ -208,22 +202,14 @@ namespace Igor.TCP {
 				totalReceived += stream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
 			}
 			if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-				Debug.Log("Waiting for Data 0/" + toReceive + " bytes");
-#else
 				Console.WriteLine("Waiting for Data 0/" + toReceive + " bytes");
-#endif
 			}
 			byte[] data = new byte[toReceive];
 			totalReceived = 0;
 			while (totalReceived < toReceive) {
 				totalReceived += stream.Read(data, (int)totalReceived, (int)(toReceive - totalReceived));
 				if (debugPrints) {
-#if UNITY_ANDROID || UNITY_STANDALONE
-					Debug.Log("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
-#else
 					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
-#endif
 				}
 			}
 			return dataIDs.IndetifyID(packetID, out dataObj, data);

@@ -42,8 +42,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ClientConnectedEventArgs.cs" />
     <Compile Include="ConnectionData.cs" />
+    <Compile Include="ConnectionInfo.cs" />
     <Compile Include="DataIDs.cs" />
+    <Compile Include="DataReroutedEventArgs.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="MyBinder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -10,10 +10,6 @@ namespace Igor.TCP {
 	/// </summary>
 	public class DataIDs {
 		/// <summary>
-		/// How many bytes are used to identify a packet
-		/// </summary>
-		public const int PACKET_ID_COMPLEXITY = 1;
-		/// <summary>
 		/// Packet ID for TCPData structure
 		/// </summary>
 		public const byte TCPDataID = 0;
@@ -47,11 +43,18 @@ namespace Igor.TCP {
 		/// Packet ID for handling responses to requests
 		/// </summary>
 		internal const byte ResponseReceptionID = 255;
-
 		/// <summary>
 		/// Packet ID for handling property synchronization
 		/// </summary>
-		public const byte PropertySyncID = 249;
+		internal const byte PropertySyncID = 249;
+		/// <summary>
+		/// How many bytes are used to identify a client
+		/// </summary>
+		public const byte CLIENT_IDENTIFICATION_COMPLEXITY = 1;
+		/// <summary>
+		/// How many bytes are used to identify a packet
+		/// </summary>
+		public const byte PACKET_ID_COMPLEXITY = 1;
 
 
 		internal readonly Dictionary<byte, Tuple<Type, Delegate>> idDict = new Dictionary<byte, Tuple<Type, Delegate>>();
@@ -62,28 +65,30 @@ namespace Igor.TCP {
 		internal readonly Dictionary<byte, Delegate> responseDict = new Dictionary<byte, Delegate>();
 
 
+		internal static readonly Dictionary<byte, byte> rerouter = new Dictionary<byte, byte>();
+
 		private BinaryFormatter bf = new BinaryFormatter();
+		private ResponseManager responseManager;
+
 		internal TCPConnection connection;
 
-		private ResponseManager responseManager;
+		internal event EventHandler<DataReroutedEventArgs> OnRerouteRequest;
 
 		internal DataIDs(TCPConnection connection) {
 			this.connection = connection;
 			responseManager = new ResponseManager(this);
 		}
 
-		private byte ParseID(byte[] packetID) {
-			return packetID[0];
-		}
-
 		internal Type IndetifyID(byte[] ID, out object dataObj, byte[] data) {
-			byte id = ParseID(ID);
-			switch (id) {
+			if (Reroute(ID, data)) {
+				dataObj = null;
+				return null;
+			}
+			switch (ID[0]) { //TODO account for more complex packet identifier
 				case TCPDataID: {
 					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(data, 0, data.Length);
 						ms.Seek(0, SeekOrigin.Begin);
-						Helper.SaveArrayToFile(@"D:\data.txt", ms.ToArray());
 						dataObj = bf.Deserialize(ms);
 					}
 					return typeof(TCPData);
@@ -111,7 +116,7 @@ namespace Igor.TCP {
 					TCPRequest request = new TCPRequest(requestID);
 
 					if (!responseDict.ContainsKey(requestID)) {
-						throw new Exception(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request));
+						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request));
 					}
 					object obj = responseDict[requestID].DynamicInvoke(null);
 					if (obj is byte[]) {
@@ -142,6 +147,15 @@ namespace Igor.TCP {
 					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID[0]));
 				}
 			}
+		}
+
+
+		private bool Reroute(byte[] iD, byte[] data) {
+			if (rerouter.ContainsKey(iD[0])) {
+				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(rerouter[iD[0]], iD[0], data));
+				return true;
+			}
+			return false;
 		}
 
 		/// <summary>

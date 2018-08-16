@@ -66,13 +66,13 @@ namespace Igor.TCP {
 			}
 			return bytes;
 		}
-	
-	
+
+
 		internal static object GetObject(Type t, byte[] bytes) {
 			object obj;
 
 			if (t == typeof(bool)) {
-				obj = BitConverter.ToBoolean(bytes,0);
+				obj = BitConverter.ToBoolean(bytes, 0);
 			}
 			else if (t == typeof(char)) {
 				obj = BitConverter.ToChar(bytes, 0);
@@ -122,9 +122,33 @@ namespace Igor.TCP {
 			return result;
 		}
 
+		/// <summary>
+		/// Convert numeric value of bytes to an integer, lower index >> less important byte
+		/// </summary>
+		public static UInt64 ConvertToUInt64(byte[] byteRepresentaion) {
+			int len = byteRepresentaion.Length;
+			UInt64 ret = 0;
+			for (uint i = 0; i < len; i++) {
+				ret += byteRepresentaion[i] * IntPow(byte.MaxValue, i);
+			}
+			return ret;
+		}
+
+		private static UInt64 IntPow(UInt64 x, uint pow) {
+			UInt64 ret = 1;
+			while (pow != 0) {
+				if ((pow & 1) == 1) {
+					ret *= x;
+				}
+				x *= x;
+				pow >>= 1;
+			}
+			return ret;
+		}
+
 
 		internal static void SaveArrayToFile(string file, byte[] array) {
-			using(StreamWriter sw = File.CreateText(file)) {
+			using (StreamWriter sw = File.CreateText(file)) {
 				foreach (byte b in array) {
 					sw.Write(b + ",");
 				}

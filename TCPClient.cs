@@ -10,45 +10,52 @@ using UnityEngine;
 
 
 namespace Igor.TCP {
-	public class TCPClient : TCPConnection{
+	public class TCPClient {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
-		private TcpClient server;
-
-
-		internal RequestManager requestHandler { get; }
-		public ResponseManager responseHandler { get; }
-
-
-		public bool isListeningForData { get { return listeningForData; } }
+		private ConnectionInfo server;
 
 		/// <summary>
-		/// Initialize new TCPClient by connectiong to 'ipAddress' on port 'port'
+		/// Get connection to the server, allows client to server comunication, holds send and receiove functionality
 		/// </summary>
-		public TCPClient(string ipAddress, ushort port) : this(
-			new ConnectionData(ipAddress, port)) {
+		public TCPConnection getConnection { get { return server.connection; } }
+
+		internal RequestManager requestHandler { get; }
+
+		/// <summary>
+		/// Access to datatypes for custom packets
+		/// </summary>
+		public ResponseManager responseHandler { get; }
+
+		/// <summary>
+		/// Get ID this client was assigned by the server
+		/// </summary>
+		public byte[] clientID { get; private set; }
+
+
+		/// <summary>
+		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
+		/// </summary>
+		public TCPClient(string ipAddress, ushort port)
+			: this(new ConnectionData(ipAddress, port)) {
 		}
 
 		/// <summary>
-		/// Initialize new TCPClient by connectiong to a server defined in 'data'
+		/// Initialize new TCPClient by connecting to a server defined in 'data'
 		/// </summary>
-		public TCPClient(ConnectionData data) : base(false) {
+		public TCPClient(ConnectionData data) {
 			this.port = data.port;
 			if (IPAddress.TryParse(data.ipAddress, out address)) {
-				server = new TcpClient();
-				server.Connect(address, port);
-				stream = server.GetStream();
-				requestHandler = new RequestManager(this);
-				responseHandler = new ResponseManager(dataIDs);
-				new Thread(new ThreadStart(DataReception)) { Name = "DataReception" }.Start();
-				listeningForData = true;
+				TcpClient serverBase = new TcpClient();
+				serverBase.Connect(address, port);
+				clientID = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
+				NetworkStream stream = serverBase.GetStream();
+				stream.Read(clientID, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 
-#if UNITY_ANDROID || UNITY_STANDALONE
-				Debug.Log("Connection Established");
-#else
+				server = new ConnectionInfo(address, clientID[0], serverBase, new TCPConnection(serverBase, false));
+				new Thread(new ThreadStart(this.server.connection.DataReception)) { Name = "DataReception" }.Start();
 				Console.WriteLine("Connection Established");
-#endif
 			}
 			else {
 				throw new Exception("Entered Invalid IP Address!");
@@ -56,66 +63,74 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
+		/// Set listening for incomming data from connected client 'clientID'
+		/// </summary>
+		public void SetListeningForData(byte clientID, bool state) {
+			server.connection.listeningForData = state;
+		}
+
+
+		/// <summary>
 		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
 		public void SyncPropery(object instance, string propertyName, byte propID) {
 			PropertyInfo info = instance.GetType().GetProperty(propertyName);
-			dataIDs.syncProps.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
+			server.connection.dataIDs.syncProps.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
 		}
 
+
+		/// <summary>
+		/// NIY, no guarantee of safety/funcionality when using this
+		/// </summary>
+		//TODO
+		public void UpdateProp(byte id, object value) {
+			server.connection.SendData(DataIDs.PropertySyncID, id, Helper.GetBytesFromObject<object>(value));
+		}
+
+		/// <summary>
+		/// NIY, no guarantee of safety/funcionality when using this
+		/// </summary>
+		//TODO
+		public void DefineTwoWayComuncation<TData>(byte ID, Func<TData> function) {
+			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
+			server.connection.dataIDs.responseDict.Add(ID, function);
+		}
 
 		/// <summary>
 		/// NIY, no guarantee of safety when using this TODO
 		/// </summary>
 		//TODO
-		public void UpdatedProp(byte id, object value) {
-			SendData(DataIDs.PropertySyncID, id, Helper.GetBytesFromObject<object>(value));
-		}
-
-		/// <summary>
-		/// NIY, no guarantee of safety when using this TODO
-		/// </summary>
-		//TODO
-		public void DefineRequestResponseEntry<TData>(byte ID, Func<TData> function) {
-			dataIDs.requestDict.Add(ID, typeof(TData));
-			dataIDs.responseDict.Add(ID, function);
-		}
-
-		/// <summary>
-		/// NIY, no guarantee of safety when using this TODO
-		/// </summary>
-		//TODO
-		public void CancelRequestResponseID(byte ID) {
-			dataIDs.requestDict.Remove(ID);
-			dataIDs.responseDict.Remove(ID);
+		public void CancelTwoWayComunication(byte ID) {
+			server.connection.dataIDs.requestDict.Remove(ID);
+			server.connection.dataIDs.responseDict.Remove(ID);
 		}
 
 		/// <summary>
 		/// Define custom request by specifying its 'TData' type with selected 'ID'
 		/// </summary>
 		public void DefineRequestEntry<TData>(byte ID) {
-			dataIDs.requestDict.Add(ID, typeof(TData));
+			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
 		}
 
 		/// <summary>
 		/// Cancel custom request of 'TData' under 'ID'
 		/// </summary>
 		public void CancelRequestID(byte ID) {
-			dataIDs.requestDict.Remove(ID);
+			server.connection.dataIDs.requestDict.Remove(ID);
 		}
 
 		/// <summary>
 		/// Define response 'function' to be called when request packet with 'ID' is received
 		/// </summary>
 		public void DefineResponseEntry<TData>(byte ID, Func<TData> function) {
-			dataIDs.responseDict.Add(ID, function);
+			server.connection.dataIDs.responseDict.Add(ID, function);
 		}
 
 		/// <summary>
 		/// Cancel response to request with 'ID'
 		/// </summary>
 		public void CancelResponseID(byte ID) {
-			dataIDs.responseDict.Remove(ID);
+			server.connection.dataIDs.responseDict.Remove(ID);
 		}
 
 		/// <summary>
@@ -124,14 +139,6 @@ namespace Igor.TCP {
 		public async Task<TCPResponse> RaiseRequestAsync(byte ID) {
 			TCPResponse data = await requestHandler.Request(ID);
 			return data;
-			//OnRequestHandeled?.Invoke(ID, data);
-		}
-
-		/// <summary>
-		/// Stops listening for incomming data
-		/// </summary>
-		public void StopListening() {
-			listeningForData = false;
 		}
 	}
 }
