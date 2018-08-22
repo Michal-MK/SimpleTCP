@@ -20,9 +20,10 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Is client listening for incomming data
 		/// </summary>
-		public bool listeningForData {get; internal set; } = true;
+		public bool listeningForData { get; internal set; } = true;
 
-		internal bool isServer;
+
+		public bool sendingData { get; internal set; } = true;
 
 		/// <summary>
 		/// Print debug information to console
@@ -45,6 +46,7 @@ namespace Igor.TCP {
 		public event EventHandler<Int64> OnInt64Received;
 
 		internal event EventHandler<TCPResponse> _OnResponse;
+		internal event EventHandler<byte> _OnClientDisconnected;
 
 
 		internal RequestManager requestHandler { get; }
@@ -55,6 +57,8 @@ namespace Igor.TCP {
 		public ResponseManager responseHandler { get; }
 
 
+		internal Thread senderThread;
+		internal Thread receiverThread;
 
 		/// <summary>
 		/// Define simple data packets and get internal/externaly defined packet IDs
@@ -63,12 +67,16 @@ namespace Igor.TCP {
 
 		private Queue<Tuple<byte, byte[]>> queuedBytes = new Queue<Tuple<byte, byte[]>>();
 
-		internal TCPConnection(TcpClient baseClient, bool isServer) {
+		internal TCPConnection(TcpClient baseClient) {
 			stream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
-			this.isServer = isServer;
 			bf.Binder = new MyBinder();
-			new Thread(new ThreadStart(SendDataFromQueue)) { Name = "Sender Thread" }.Start();
+
+			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = "Sender Thread" };
+			senderThread.Start();
+			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = "Data Reception" };
+			receiverThread.Start();
+
 			requestHandler = new RequestManager(this);
 			responseHandler = new ResponseManager(dataIDs);
 		}
@@ -76,6 +84,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send TCPData to connected device
 		/// </summary>
+		[Obsolete("TCPData is deprecated due to being too specific, useless to the public and generic functinality already exists, will be removed in future release")]
 		public void SendData(TCPData data) {
 			using (MemoryStream ms = new MemoryStream()) {
 				bf.Serialize(ms, data);
@@ -117,11 +126,11 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		///  Sends packet with id 'packetID' and additional byte 'requestID' ad a first elemtent of inner array of 'requestID' and 'data'
+		///  Sends packet with id 'packetID' and additional byte 'subPacketID' as a first elemtent of inner array of 'subPacketID' and 'data'
 		/// </summary>
-		internal void SendData(byte packetID, byte requestID, byte[] data) {
+		public void SendData(byte packetID, byte subPacketID, byte[] data) {
 			byte[] merged = new byte[data.Length + 1];
-			merged[0] = requestID;
+			merged[0] = subPacketID;
 			data.CopyTo(merged, 1);
 			SendData(packetID, merged);
 		}
@@ -129,17 +138,28 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Main Send fuction, send byte[] of 'data' with packet ID 'packetID'
 		/// </summary>
-		public void SendData(byte packetID, byte[] data) {
+		internal void SendData(byte packetID, byte[] data) {
 			queuedBytes.Enqueue(new Tuple<byte, byte[]>(packetID, data));
 			evnt.Set();
 		}
+
+		/// <summary>
+		/// Send user defined byte[] 'data' with 'dataID' as the first element, sent via <see cref="DataIDs.UserDefined"/> packet ID
+		/// </summary>
+		public void SendUserDefinedData(byte dataID, byte[] data) {
+			byte[] ready = new byte[data.Length + DataIDs.PACKET_ID_COMPLEXITY];
+			ready[0] = dataID;
+			Array.Copy(data, 0, ready, 1, data.Length);
+			SendData(DataIDs.UserDefined, ready);
+		}
+
 
 		#region Queue sending
 
 		private ManualResetEventSlim evnt;
 		internal void SendDataFromQueue() {
 			evnt = new ManualResetEventSlim();
-			while (true) {
+			while (sendingData) {
 				evnt.Reset();
 				if (queuedBytes.Count > 0) {
 					SendData(queuedBytes.Dequeue());
@@ -159,6 +179,13 @@ namespace Igor.TCP {
 			merged[packetSize.Length] = packetID;
 			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY);
 			stream.Write(merged, 0, merged.Length);
+			if (data == new byte[] { DataIDs.ClientDisconnected }) {
+				stream.Close();
+				stream.Dispose();
+				_OnClientDisconnected?.Invoke(this, 0);
+				sendingData = false;
+				evnt.Set();
+			}
 		}
 
 		#endregion
@@ -172,9 +199,15 @@ namespace Igor.TCP {
 					OnTCPDataReceived(this, (TCPData)receivedData);
 				}
 				else if (data == typeof(string)) {
+					if (OnStringReceived == null) {
+						throw new NullReferenceException("Other client is sending a string packet, but the OnStringReceived event is not consumed!");
+					}
 					OnStringReceived(this, (string)receivedData);
 				}
 				else if (data == typeof(Int64)) {
+					if (OnInt64Received == null) {
+						throw new NullReferenceException("Other client is sending a Int64(long) packet, but the OnInt64Received event is not consumed!");
+					}
 					OnInt64Received(this, (Int64)receivedData);
 				}
 				else if (data == typeof(TCPResponse)) {
@@ -182,6 +215,13 @@ namespace Igor.TCP {
 				}
 				else if (data == typeof(TCPRequest)) {
 					continue;
+				}
+				else if (data == typeof(TCPClient)) {
+					byte clientID = ((byte[])receivedData)[0];
+					_OnClientDisconnected(this, ((byte[])receivedData)[0]);
+					listeningForData = false;
+					sendingData = false;
+					Dispose(clientID);
 				}
 			}
 		}
@@ -212,8 +252,9 @@ namespace Igor.TCP {
 					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
 				}
 			}
-			return dataIDs.IndetifyID(packetID, out dataObj, data);
+			return dataIDs.IndetifyID(packetID[0], out dataObj, data);
 		}
+		#endregion
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls
@@ -223,19 +264,9 @@ namespace Igor.TCP {
 		/// </summary>
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
-				if (disposing) {
-
-				}
 				evnt.Dispose();
 				disposedValue = true;
 			}
-		}
-
-		/// <summary>
-		/// Finalizer
-		/// </summary>
-		~TCPConnection() {
-			Dispose(false);
 		}
 
 		/// <summary>
@@ -243,10 +274,12 @@ namespace Igor.TCP {
 		/// </summary>
 		public void Dispose() {
 			Dispose(true);
+		}
+
+		internal void Dispose(byte clientID) {
+			SendData(DataIDs.ClientDisconnected, clientID);
 			GC.SuppressFinalize(this);
 		}
-		#endregion
-
 		#endregion
 	}
 }

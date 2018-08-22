@@ -13,12 +13,17 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
-		/// <returns></returns>
-		public static IPAddress GetActivePIv4Address() {
+		/// <exception cref="WebException"></exception>
+		public static IPAddress GetActiveIPv4Address() {
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
-				socket.Connect("8.8.8.8", 65530);
-				IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-				return endPoint.Address;
+				try {
+					socket.Connect("8.8.8.8", 65530);
+					IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+					return endPoint.Address;
+				}
+				catch {
+					throw new WebException("Unable to connect to google proxy", WebExceptionStatus.ConnectFailure);
+				}
 			}
 		}
 
@@ -102,10 +107,15 @@ namespace Igor.TCP {
 				obj = BitConverter.ToUInt16(bytes, 0);
 			}
 			else {
-				using (MemoryStream ms = new MemoryStream()) {
-					ms.Write(bytes, 0, bytes.Length);
-					ms.Seek(0, SeekOrigin.Begin);
-					obj = bf.Deserialize(ms);
+				try {
+					using (MemoryStream ms = new MemoryStream()) {
+						ms.Write(bytes, 0, bytes.Length);
+						ms.Seek(0, SeekOrigin.Begin);
+						obj = bf.Deserialize(ms);
+					}
+				}
+				catch {
+					obj = bytes;
 				}
 			}
 			return obj;

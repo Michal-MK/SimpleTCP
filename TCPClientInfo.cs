@@ -10,18 +10,24 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Is current client playing the role of the server
 		/// </summary>
-		public bool isServer;
+		public bool isServer { get; }
 		/// <summary>
 		/// Address of current instance
 		/// </summary>
-		public IPAddress clientAddress;
+		public IPAddress clientAddress { get; }
+
+		/// <summary>
+		/// The name of connected client, if not set up users computer name is used.
+		/// </summary>
+		public string computerName { get; }
 
 		/// <summary>
 		/// Initialize new ClientInfo
 		/// </summary>
-		public TCPClientInfo(bool isServer, IPAddress clientAddress) {
+		public TCPClientInfo(string computerName, bool isServer, IPAddress clientAddress) {
 			this.isServer = isServer;
 			this.clientAddress = clientAddress;
+			this.computerName = computerName;
 		}
 	}
 }

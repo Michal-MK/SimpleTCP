@@ -8,13 +8,15 @@ using System.Collections.Generic;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// TCP Server
+	/// TCP Server, accepts client conections
 	/// </summary>
 	public class TCPServer {
 
+		private TcpListener clientConnectionListener;
+
 		private Dictionary<byte, ConnectionInfo> connectedClients = new Dictionary<byte, ConnectionInfo>();
 
-		internal bool listenForClientConnections = true;
+		internal bool listenForClientConnections = false;
 
 		/// <summary>
 		/// Called when client connects to this server
@@ -22,10 +24,15 @@ namespace Igor.TCP {
 		public event EventHandler<ClientConnectedEventArgs> OnConnectionEstablished;
 
 		/// <summary>
+		/// Called when client disconnects from this server
+		/// </summary>
+		public event EventHandler<ClientDisconnectedEventArgs> OnClientDisconnected;
+
+		/// <summary>
 		/// Start server using specified 'port' and internally found IP
 		/// </summary>
 		public void Start(ushort port) {
-			StartServer(Helper.GetActivePIv4Address(), port);
+			StartServer(Helper.GetActiveIPv4Address(), port);
 		}
 
 		/// <summary>
@@ -79,43 +86,65 @@ namespace Igor.TCP {
 			connectedClients[clientID].connection.listeningForData = state;
 		}
 
+
 		/// <summary>
 		/// Set listening for incomming client connection attempts
 		/// </summary>
 		public void SetIncommingClientConnection(bool state) {
-			listenForClientConnections = state;
+			if (!listenForClientConnections) {
+				StartServer(lastAddress, lastPort);
+			}
+			if (!state) {
+				listenForClientConnections = state;
+				clientConnectionListener.Stop();
+			}
 		}
+
+		private IPAddress lastAddress;
+		private ushort lastPort;
 
 		private void StartServer(IPAddress address, ushort port) {
 			Console.WriteLine(address);
+			listenForClientConnections = true;
+
+			lastAddress = address;
+			lastPort = port;
 			new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })).Start();
 		}
 
 		private void ListenForClientConnection(IPAddress address, ushort port) {
-			TcpListener listener = new TcpListener(address, port);
-			listener.Start();
+			clientConnectionListener = new TcpListener(address, port);
+			clientConnectionListener.Start();
 			while (listenForClientConnections) {
-				TcpClient newlyConnected = listener.AcceptTcpClient();
+				TcpClient newlyConnected = clientConnectionListener.AcceptTcpClient();
 				byte ID = (byte)connectedClients.Count;
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 
-				TCPConnection connection = new TCPConnection(newlyConnected, true);
+				TCPConnection connection = new TCPConnection(newlyConnected);
 				connection.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
+				connection._OnClientDisconnected += ClientDisconnected;
 
-				ConnectionInfo conn = new ConnectionInfo(((IPEndPoint)newlyConnected.Client.RemoteEndPoint).Address,
+				ConnectionInfo conn = new ConnectionInfo(
+					((IPEndPoint)newlyConnected.Client.RemoteEndPoint).Address,
 					ID,
 					newlyConnected,
-					connection);
+					connection
+				);
 
 				connectedClients.Add(ID, conn);
 				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, conn));
-				new Thread(new ThreadStart(conn.connection.DataReception)) { Name = "DataReception" }.Start();
 			}
 		}
 
+		private void ClientDisconnected(object sender, byte e) {
+			GetConnection(0).SendData(DataIDs.ClientDisconnected, e);
+			connectedClients.Remove(e);
+			OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e));
+		}
+
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
-			GetConnection(e.forwardedClient).SendData(e.packetID, e.data);
+			GetConnection(e.forwardedClient).SendData(e.isUserDefined ?  DataIDs.UserDefined : e.universalID, e.data);
 		}
 
 		/// <summary>
@@ -177,9 +206,19 @@ namespace Igor.TCP {
 			connectedClients[clientID].connection.dataIDs.responseDict.Remove(ID);
 		}
 
-
-		public void DefineRerouteID(byte fromClient, byte toClient, byte[] data) {
-
+		/// <summary>
+		/// Define rerouting of all packets from 'fromClient' coming to this server to under 'packetID' to be sent to 'toClient'
+		/// <para>If 'dataID' is provided, 'packetID' is replaced by <see cref="DataIDs.UserDefined"/> constant value.</para>
+		/// </summary>
+		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID, byte? dataID = null) {
+			ReroutingInfo info = new ReroutingInfo(fromClient, toClient);
+			if (dataID != null) {
+				info.SetPacketInfoUserDefined(dataID.Value);
+			}
+			else {
+				info.SetPacketInfo(packetID);
+			}
+			DataIDs.rerouter.Add(packetID, info);
 		}
 
 		/// <summary>

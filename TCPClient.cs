@@ -10,6 +10,9 @@ using UnityEngine;
 
 
 namespace Igor.TCP {
+	/// <summary>
+	/// Client that can connect to a TCPServer
+	/// </summary>
 	public class TCPClient {
 		private readonly IPAddress address;
 		private readonly ushort port;
@@ -31,7 +34,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Get ID this client was assigned by the server
 		/// </summary>
-		public byte[] clientID { get; private set; }
+		public byte clientID { get; private set; }
 
 
 		/// <summary>
@@ -44,21 +47,21 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Initialize new TCPClient by connecting to a server defined in 'data'
 		/// </summary>
+		/// <exception cref="WebException"></exception>
 		public TCPClient(ConnectionData data) {
 			this.port = data.port;
 			if (IPAddress.TryParse(data.ipAddress, out address)) {
 				TcpClient serverBase = new TcpClient();
 				serverBase.Connect(address, port);
-				clientID = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
+				byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 				NetworkStream stream = serverBase.GetStream();
-				stream.Read(clientID, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-
-				server = new ConnectionInfo(address, clientID[0], serverBase, new TCPConnection(serverBase, false));
-				new Thread(new ThreadStart(this.server.connection.DataReception)) { Name = "DataReception" }.Start();
+				stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				clientID = buffer[0];
+				server = new ConnectionInfo(address, clientID, serverBase, new TCPConnection(serverBase));
 				Console.WriteLine("Connection Established");
 			}
 			else {
-				throw new Exception("Entered Invalid IP Address!");
+				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
 		}
 
@@ -88,18 +91,16 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// NIY, no guarantee of safety/funcionality when using this
+		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transimssion like.
 		/// </summary>
-		//TODO
 		public void DefineTwoWayComuncation<TData>(byte ID, Func<TData> function) {
 			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
 			server.connection.dataIDs.responseDict.Add(ID, function);
 		}
 
 		/// <summary>
-		/// NIY, no guarantee of safety when using this TODO
+		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transimssion like.
 		/// </summary>
-		//TODO
 		public void CancelTwoWayComunication(byte ID) {
 			server.connection.dataIDs.requestDict.Remove(ID);
 			server.connection.dataIDs.responseDict.Remove(ID);
@@ -139,6 +140,25 @@ namespace Igor.TCP {
 		public async Task<TCPResponse> RaiseRequestAsync(byte ID) {
 			TCPResponse data = await requestHandler.Request(ID);
 			return data;
+		}
+
+		/// <summary>
+		/// Disconnect from current server
+		/// </summary>
+		public void Disconnect() {
+			if (getConnection != null) {
+				getConnection.listeningForData = false;
+				getConnection.Dispose(clientID);
+				getConnection._OnClientDisconnected += GetConnection_OnClientDisconnected;
+			}
+		}
+
+		private void GetConnection_OnClientDisconnected(object sender, byte e) {
+			e = clientID;
+			getConnection.senderThread.Abort();
+			getConnection.receiverThread.Abort();
+			server.baseClient.Close();
+			server.baseClient.Dispose();
 		}
 	}
 }

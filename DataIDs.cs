@@ -12,6 +12,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Packet ID for TCPData structure
 		/// </summary>
+		[System.Obsolete("This consatant will be removed in future release!, useles to the public")]
 		public const byte TCPDataID = 0;
 		/// <summary>
 		/// Packet ID for string
@@ -65,7 +66,7 @@ namespace Igor.TCP {
 		internal readonly Dictionary<byte, Delegate> responseDict = new Dictionary<byte, Delegate>();
 
 
-		internal static readonly Dictionary<byte, byte> rerouter = new Dictionary<byte, byte>();
+		internal static readonly Dictionary<byte, ReroutingInfo> rerouter = new Dictionary<byte, ReroutingInfo>();
 
 		private BinaryFormatter bf = new BinaryFormatter();
 		private ResponseManager responseManager;
@@ -79,12 +80,12 @@ namespace Igor.TCP {
 			responseManager = new ResponseManager(this);
 		}
 
-		internal Type IndetifyID(byte[] ID, out object dataObj, byte[] data) {
+		internal Type IndetifyID(byte ID, out object dataObj, byte[] data) {
 			if (Reroute(ID, data)) {
 				dataObj = null;
 				return null;
 			}
-			switch (ID[0]) { //TODO account for more complex packet identifier
+			switch (ID) {
 				case TCPDataID: {
 					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(data, 0, data.Length);
@@ -116,7 +117,7 @@ namespace Igor.TCP {
 					TCPRequest request = new TCPRequest(requestID);
 
 					if (!responseDict.ContainsKey(requestID)) {
-						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request));
+						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request.packetID));
 					}
 					object obj = responseDict[requestID].DynamicInvoke(null);
 					if (obj is byte[]) {
@@ -143,16 +144,21 @@ namespace Igor.TCP {
 					dataObj = null;
 					return typeof(TCPRequest);
 				}
+				case ClientDisconnected: {
+					dataObj = data;
+					return typeof(TCPClient);
+				}
 				default: {
-					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID[0]));
+					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID));
 				}
 			}
 		}
 
 
-		private bool Reroute(byte[] iD, byte[] data) {
-			if (rerouter.ContainsKey(iD[0])) {
-				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(rerouter[iD[0]], iD[0], data));
+		private bool Reroute(byte ID, byte[] data) {
+			if (rerouter.ContainsKey(ID)) {
+				ReroutingInfo info = rerouter[ID];
+				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, (info.isUserDefined ? info.dataID : info.packetID), data, info.isUserDefined));
 				return true;
 			}
 			return false;
