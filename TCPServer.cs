@@ -109,7 +109,7 @@ namespace Igor.TCP {
 
 			lastAddress = address;
 			lastPort = port;
-			new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })).Start();
+			new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
 		}
 
 		private void ListenForClientConnection(IPAddress address, ushort port) {
@@ -120,8 +120,11 @@ namespace Igor.TCP {
 				byte ID = (byte)connectedClients.Count;
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				byte[] clientInfo = new byte[1024];
 
-				TCPConnection connection = new TCPConnection(newlyConnected);
+				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
+				TCPClientInfo info = (TCPClientInfo)Helper.GetObject(typeof(TCPClientInfo), clientInfo);
+				TCPConnection connection = new TCPConnection(newlyConnected, info);
 				connection.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				connection._OnClientDisconnected += ClientDisconnected;
 
@@ -133,18 +136,17 @@ namespace Igor.TCP {
 				);
 
 				connectedClients.Add(ID, conn);
-				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, conn));
+				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, info));
 			}
 		}
 
 		private void ClientDisconnected(object sender, byte e) {
-			GetConnection(0).SendData(DataIDs.ClientDisconnected, e);
-			connectedClients.Remove(e);
 			OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e));
+			connectedClients.Remove(e);
 		}
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
-			GetConnection(e.forwardedClient).SendData(e.isUserDefined ?  DataIDs.UserDefined : e.universalID, e.data);
+			GetConnection(e.forwardedClient).SendData(e.isUserDefined ? DataIDs.UserDefined : e.universalID, e.data);
 		}
 
 		/// <summary>

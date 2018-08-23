@@ -18,6 +18,10 @@ namespace Igor.TCP {
 		private readonly ushort port;
 
 		private ConnectionInfo server;
+		/// <summary>
+		/// Infromation about this client
+		/// </summary>
+		public TCPClientInfo clientInfo { get; set; }
 
 		/// <summary>
 		/// Get connection to the server, allows client to server comunication, holds send and receiove functionality
@@ -38,8 +42,15 @@ namespace Igor.TCP {
 
 
 		/// <summary>
+		/// Log debug information into the console
+		/// </summary>
+		public bool debugPrints { get; set; } = false;
+
+
+		/// <summary>
 		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
 		/// </summary>
+		/// <exception cref="WebException"></exception>
 		public TCPClient(string ipAddress, ushort port)
 			: this(new ConnectionData(ipAddress, port)) {
 		}
@@ -51,19 +62,52 @@ namespace Igor.TCP {
 		public TCPClient(ConnectionData data) {
 			this.port = data.port;
 			if (IPAddress.TryParse(data.ipAddress, out address)) {
-				TcpClient serverBase = new TcpClient();
-				serverBase.Connect(address, port);
-				byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
-				NetworkStream stream = serverBase.GetStream();
-				stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-				clientID = buffer[0];
-				server = new ConnectionInfo(address, clientID, serverBase, new TCPConnection(serverBase));
-				Console.WriteLine("Connection Established");
+				if (debugPrints) {
+					Console.WriteLine("IP parsed successfully");
+				}
 			}
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
 		}
+		
+		/// <summary>
+		/// Connect to server with specified IP and port
+		/// </summary>
+		public void Connect() {
+			TcpClient serverBase = new TcpClient();
+			serverBase.Connect(address, port);
+			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
+			NetworkStream stream = serverBase.GetStream();
+			stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+			if(clientInfo == null) {
+				clientInfo = SetUpClientInfo();
+			}
+			clientInfo.clientID = clientID = buffer[0];
+			
+			byte[] clientInfoArray = Helper.GetBytesFromObject<TCPClientInfo>(clientInfo);
+
+			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
+			server = new ConnectionInfo(address, clientID, serverBase, new TCPConnection(serverBase,clientInfo));
+			Console.WriteLine("Connection Established");
+		}
+
+
+		/// <summary>
+		/// Quick setup of client metadata
+		/// </summary>
+		/// <param name="clientName">If left empty Current user name is used</param>
+		public TCPClientInfo SetUpClientInfo(string clientName = "") {
+			if (clientName == "") {
+				clientInfo = new TCPClientInfo(Environment.UserName, false, address);
+			}
+			else {
+				clientInfo = new TCPClientInfo(clientName, false, address);
+			}
+			clientInfo.clientID = clientID;
+			return clientInfo;
+		}
+
 
 		/// <summary>
 		/// Set listening for incomming data from connected client 'clientID'
@@ -147,18 +191,8 @@ namespace Igor.TCP {
 		/// </summary>
 		public void Disconnect() {
 			if (getConnection != null) {
-				getConnection.listeningForData = false;
 				getConnection.Dispose(clientID);
-				getConnection._OnClientDisconnected += GetConnection_OnClientDisconnected;
 			}
-		}
-
-		private void GetConnection_OnClientDisconnected(object sender, byte e) {
-			e = clientID;
-			getConnection.senderThread.Abort();
-			getConnection.receiverThread.Abort();
-			server.baseClient.Close();
-			server.baseClient.Dispose();
 		}
 	}
 }

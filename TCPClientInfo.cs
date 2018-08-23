@@ -3,7 +3,7 @@ using System.Net;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// INY
+	/// Basic information about this client, can be sent to sever
 	/// </summary>
 	[Serializable]
 	public class TCPClientInfo {
@@ -11,6 +11,7 @@ namespace Igor.TCP {
 		/// Is current client playing the role of the server
 		/// </summary>
 		public bool isServer { get; }
+
 		/// <summary>
 		/// Address of current instance
 		/// </summary>
@@ -20,6 +21,11 @@ namespace Igor.TCP {
 		/// The name of connected client, if not set up users computer name is used.
 		/// </summary>
 		public string computerName { get; }
+
+		/// <summary>
+		/// The ID assigned from server<para>Value 255 is invalid/not yet assigned!</para> 
+		/// </summary>
+		public byte clientID { get; internal set; } = 255;
 
 		/// <summary>
 		/// Initialize new ClientInfo

@@ -10,9 +10,9 @@ namespace Igor.TCP {
 	/// </summary>
 	public class ClientConnectedEventArgs : EventArgs {
 
-		internal ClientConnectedEventArgs(TCPServer myServer, ConnectionInfo connInfo) {
+		internal ClientConnectedEventArgs(TCPServer myServer, TCPClientInfo clientInfo) {
 			this.myServer = myServer;
-			this.connInfo = connInfo;
+			this.clientInfo = clientInfo;
 		}
 
 		/// <summary>
@@ -21,8 +21,8 @@ namespace Igor.TCP {
 		public TCPServer myServer { get; }
 
 		/// <summary>
-		/// Basic information about client
+		/// Basic Information ablut client
 		/// </summary>
-		public ConnectionInfo connInfo { get; }
+		public TCPClientInfo clientInfo { get; }
 	}
 }

@@ -30,24 +30,27 @@ namespace Igor.TCP {
 		/// NIY, no guarantee of safety when using this TODO
 		/// </summary>
 		//TODO
-		public const byte ServerStop = 250;
+		public const byte ServerStop = 255;
 		/// <summary>
-		/// NIY, no guarantee of safety when using this TODO
+		/// Packet ID to signalize clinet disconnect
 		/// </summary>
-		//TODO
-		public const byte ClientDisconnected = 251;
+		public const byte ClientDisconnected = 254;
 		/// <summary>
 		/// Packet ID for handling requests
 		/// </summary>
-		internal const byte RequestReceptionID = 254;
+		internal const byte RequestReceptionID = 250;
 		/// <summary>
 		/// Packet ID for handling responses to requests
 		/// </summary>
-		internal const byte ResponseReceptionID = 255;
+		internal const byte ResponseReceptionID = 251;
 		/// <summary>
 		/// Packet ID for handling property synchronization
 		/// </summary>
-		internal const byte PropertySyncID = 249;
+		internal const byte PropertySyncID = 252;
+		/// <summary>
+		/// Packet ID for sending client information to the other side
+		/// </summary>
+		public const byte ClientInformationID = 253;
 		/// <summary>
 		/// How many bytes are used to identify a client
 		/// </summary>

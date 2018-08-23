@@ -22,7 +22,9 @@ namespace Igor.TCP {
 		/// </summary>
 		public bool listeningForData { get; internal set; } = true;
 
-
+		/// <summary>
+		/// Is client actively trying to send data
+		/// </summary>
 		public bool sendingData { get; internal set; } = true;
 
 		/// <summary>
@@ -33,6 +35,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Called when successfully received data from <see cref="DataIDs.TCPDataID"></see> marked packet
 		/// </summary>
+		[Obsolete("Will be removed along with all references to TCPData")]
 		public event EventHandler<TCPData> OnTCPDataReceived;
 
 		/// <summary>
@@ -67,14 +70,16 @@ namespace Igor.TCP {
 
 		private Queue<Tuple<byte, byte[]>> queuedBytes = new Queue<Tuple<byte, byte[]>>();
 
-		internal TCPConnection(TcpClient baseClient) {
+		internal int dataLengthHeadder = sizeof(Int64);
+
+		internal TCPConnection(TcpClient baseClient, TCPClientInfo info) {
 			stream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
 			bf.Binder = new MyBinder();
 
-			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = "Sender Thread" };
+			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = string.Format("{0} ({1}) \"{2}\" Sender",info.clientAddress, info.clientID,info.computerName)};
 			senderThread.Start();
-			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = "Data Reception" };
+			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = string.Format("{0} ({1}) \"{2}\" Receiver", info.clientAddress, info.clientID, info.computerName) };
 			receiverThread.Start();
 
 			requestHandler = new RequestManager(this);
@@ -90,7 +95,7 @@ namespace Igor.TCP {
 				bf.Serialize(ms, data);
 				byte[] bytes = ms.ToArray();
 				if (debugPrints) {
-					Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+					Console.WriteLine("Sending data of type TCPData of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + dataLengthHeadder);
 				}
 				SendData(DataIDs.TCPDataID, bytes);
 			}
@@ -102,7 +107,7 @@ namespace Igor.TCP {
 		public void SendData(string data) {
 			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + dataLengthHeadder);
 			}
 			SendData(DataIDs.StringID, bytes);
 		}
@@ -113,7 +118,7 @@ namespace Igor.TCP {
 		public void SendData(Int64 data) {
 			byte[] bytes = BitConverter.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + sizeof(Int64));
+				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + dataLengthHeadder);
 			}
 			SendData(DataIDs.Int64ID, bytes);
 		}
@@ -179,9 +184,7 @@ namespace Igor.TCP {
 			merged[packetSize.Length] = packetID;
 			data.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY);
 			stream.Write(merged, 0, merged.Length);
-			if (data == new byte[] { DataIDs.ClientDisconnected }) {
-				stream.Close();
-				stream.Dispose();
+			if (packetID == DataIDs.ClientDisconnected) {
 				_OnClientDisconnected?.Invoke(this, 0);
 				sendingData = false;
 				evnt.Set();
@@ -217,11 +220,11 @@ namespace Igor.TCP {
 					continue;
 				}
 				else if (data == typeof(TCPClient)) {
-					byte clientID = ((byte[])receivedData)[0];
-					_OnClientDisconnected(this, ((byte[])receivedData)[0]);
-					listeningForData = false;
-					sendingData = false;
-					Dispose(clientID);
+					if (listeningForData) {
+						byte clientID = ((byte[])receivedData)[0];
+						Dispose(clientID);
+						sendingData = false;
+					}
 				}
 			}
 		}
@@ -278,7 +281,7 @@ namespace Igor.TCP {
 
 		internal void Dispose(byte clientID) {
 			SendData(DataIDs.ClientDisconnected, clientID);
-			GC.SuppressFinalize(this);
+			listeningForData = false;
 		}
 		#endregion
 	}
