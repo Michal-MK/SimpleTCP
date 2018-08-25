@@ -10,11 +10,6 @@ namespace Igor.TCP {
 	/// </summary>
 	public class DataIDs {
 		/// <summary>
-		/// Packet ID for TCPData structure
-		/// </summary>
-		[System.Obsolete("This consatant will be removed in future release!, useles to the public")]
-		public const byte TCPDataID = 0;
-		/// <summary>
 		/// Packet ID for string
 		/// </summary>
 		public const byte StringID = 32;
@@ -69,7 +64,7 @@ namespace Igor.TCP {
 		internal readonly Dictionary<byte, Delegate> responseDict = new Dictionary<byte, Delegate>();
 
 
-		internal static readonly Dictionary<byte, ReroutingInfo> rerouter = new Dictionary<byte, ReroutingInfo>();
+		internal static readonly Dictionary<byte, List<ReroutingInfo>> rerouter = new Dictionary<byte, List<ReroutingInfo>>();
 
 		private BinaryFormatter bf = new BinaryFormatter();
 		private ResponseManager responseManager;
@@ -83,20 +78,20 @@ namespace Igor.TCP {
 			responseManager = new ResponseManager(this);
 		}
 
-		internal Type IndetifyID(byte ID, out object dataObj, byte[] data) {
-			if (Reroute(ID, data)) {
+		internal Type IndetifyID(byte ID, byte fromClient, byte[] data, out object dataObj) {
+			if (ID == DataIDs.UserDefined) {
+				if (Reroute(data[0], fromClient, data)) {
+					dataObj = null;
+					return null; 
+				}
+			}
+			else if (Reroute(ID, fromClient, data)) {
 				dataObj = null;
 				return null;
 			}
+
+
 			switch (ID) {
-				case TCPDataID: {
-					using (MemoryStream ms = new MemoryStream()) {
-						ms.Write(data, 0, data.Length);
-						ms.Seek(0, SeekOrigin.Begin);
-						dataObj = bf.Deserialize(ms);
-					}
-					return typeof(TCPData);
-				}
 				case StringID: {
 					dataObj = System.Text.Encoding.UTF8.GetString(data);
 					return typeof(string);
@@ -158,9 +153,17 @@ namespace Igor.TCP {
 		}
 
 
-		private bool Reroute(byte ID, byte[] data) {
+		private bool Reroute(byte ID, byte fromClient, byte[] data) {
 			if (rerouter.ContainsKey(ID)) {
-				ReroutingInfo info = rerouter[ID];
+				ReroutingInfo info = null;
+				for (int i = 0; i < rerouter[ID].Count; i++) {
+					if (rerouter[ID][i].fromClient == fromClient) {
+						info = rerouter[ID][i];
+					}
+				}
+				if (info == null) {
+					return false;
+				}
 				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, (info.isUserDefined ? info.dataID : info.packetID), data, info.isUserDefined));
 				return true;
 			}
@@ -179,6 +182,16 @@ namespace Igor.TCP {
 		/// </summary>
 		public void RemoveCustomDefinitionForID(byte ID) {
 			idDict.Remove(ID);
+		}
+
+
+		internal static void AddToReroute(byte packetID, ReroutingInfo info) {
+			if (!rerouter.ContainsKey(packetID)) {
+				rerouter.Add(packetID, new List<ReroutingInfo>() { info });
+			}
+			else {
+				rerouter[packetID].Add(info);
+			}
 		}
 	}
 }

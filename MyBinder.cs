@@ -9,13 +9,13 @@ namespace Igor.TCP {
 			try {
 				bool isSystemType = false;
 				if (assemblyName.Contains("PublicKeyToken=null")) {
-					assemblyName = Assembly.GetExecutingAssembly().FullName;
+					assemblyName = Assembly.GetEntryAssembly().FullName;
 				}
 				else {
 					isSystemType = true;
 				}
 				string originalAssemblyName = assemblyName.Split(',')[0];
-				string wantedAssemblyName = Assembly.GetExecutingAssembly().FullName.Split(',')[0];
+				string wantedAssemblyName = Assembly.GetEntryAssembly().FullName.Split(',')[0];
 
 				foreach (Assembly ass in AppDomain.CurrentDomain.GetAssemblies()) {
 					if (ass.FullName.Split(',')[0] == (isSystemType ? originalAssemblyName : wantedAssemblyName)) {

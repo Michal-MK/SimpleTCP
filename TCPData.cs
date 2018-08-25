@@ -4,38 +4,6 @@ using System.Runtime.InteropServices;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// Data used for Purchse transmission
-	/// </summary>
-	[Serializable, StructLayout(LayoutKind.Sequential)]
-	public struct TCPData {
-		/// <summary>
-		/// Get new TCPData
-		/// </summary>
-		public TCPData(List<Item> items, PurchaseMeta meta) {
-			this.items = items.ToArray();
-			this.meta = meta;
-		}
-
-		/// <summary>
-		/// Get new TCPData
-		/// </summary>
-		public TCPData(Item[] items, PurchaseMeta meta) {
-			this.items = items;
-			this.meta = meta;
-		}
-
-		/// <summary>
-		/// Items purchased
-		/// </summary>
-		public Item[] items { get; }
-
-		/// <summary>
-		/// Purchase information
-		/// </summary>
-		public PurchaseMeta meta { get; }
-	}
-
-	/// <summary>
 	/// Simgle Item from a shop
 	/// </summary>
 	[Serializable]

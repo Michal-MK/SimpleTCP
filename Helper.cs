@@ -29,6 +29,7 @@ namespace Igor.TCP {
 
 		/// <summary>
 		/// Wrapper to all object to byte[] conversions
+		/// <para>WARNING! When serializing/deserializing custom structures the namespace has to match on both ends!</para> 
 		/// </summary>
 		public static byte[] GetBytesFromObject<T>(object obj) {
 			byte[] bytes;
@@ -72,7 +73,9 @@ namespace Igor.TCP {
 			return bytes;
 		}
 
-
+		/// <summary>
+		/// Objects have to be in the same Namespace in order to return an actual object, othervise a byte[] is returned!
+		/// </summary>
 		internal static object GetObject(Type t, byte[] bytes) {
 			object obj;
 
@@ -111,10 +114,12 @@ namespace Igor.TCP {
 					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(bytes, 0, bytes.Length);
 						ms.Seek(0, SeekOrigin.Begin);
+						bf.Binder = new MyBinder();
 						obj = bf.Deserialize(ms);
 					}
 				}
-				catch {
+				catch(Exception e) {
+					Console.WriteLine(e.Message);
 					obj = bytes;
 				}
 			}
@@ -163,6 +168,10 @@ namespace Igor.TCP {
 					sw.Write(b + ",");
 				}
 			}
+		}
+
+		internal static string BytesToString(byte[] bytes) {
+			return System.Text.Encoding.UTF8.GetString(bytes);
 		}
 	}
 }

@@ -11,6 +11,10 @@ namespace Igor.TCP {
 	/// TCP Server, accepts client conections
 	/// </summary>
 	public class TCPServer {
+		/// <summary>
+		/// Used by packets coming from the server TODO
+		/// </summary>
+		public const byte ServerPacketOrigin = 254;
 
 		private TcpListener clientConnectionListener;
 
@@ -70,10 +74,16 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Get all connected clients
 		/// </summary>
-		public ConnectionInfo[] getConnectedClients {
+		public TCPClientInfo[] getConnectedClients {
 			get {
-				ConnectionInfo[] connections = new ConnectionInfo[connectedClients.Keys.Count];
-				connectedClients.Values.CopyTo(connections, 0);
+				TCPClientInfo[] connections = new TCPClientInfo[connectedClients.Keys.Count];
+				Dictionary<byte, ConnectionInfo>.Enumerator enumer = connectedClients.GetEnumerator();
+				int i = 0;
+				while (enumer.MoveNext()) {
+					KeyValuePair<byte, ConnectionInfo> kv = enumer.Current;
+					connections[i] = kv.Value.connection.clientInfo;
+					i++;
+				}
 				return connections;
 			}
 		}
@@ -125,6 +135,7 @@ namespace Igor.TCP {
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
 				TCPClientInfo info = (TCPClientInfo)Helper.GetObject(typeof(TCPClientInfo), clientInfo);
 				TCPConnection connection = new TCPConnection(newlyConnected, info);
+				connection.tcpClientIdentifier = ServerPacketOrigin;
 				connection.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				connection._OnClientDisconnected += ClientDisconnected;
 
@@ -216,11 +227,12 @@ namespace Igor.TCP {
 			ReroutingInfo info = new ReroutingInfo(fromClient, toClient);
 			if (dataID != null) {
 				info.SetPacketInfoUserDefined(dataID.Value);
+				DataIDs.AddToReroute(dataID.Value, info);
 			}
 			else {
 				info.SetPacketInfo(packetID);
+				DataIDs.AddToReroute(packetID, info);
 			}
-			DataIDs.rerouter.Add(packetID, info);
 		}
 
 		/// <summary>
