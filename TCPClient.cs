@@ -19,19 +19,19 @@ namespace Igor.TCP {
 
 		private ConnectionInfo server;
 		/// <summary>
-		/// Infromation about this client
+		/// Information about this client
 		/// </summary>
 		public TCPClientInfo clientInfo { get; set; }
 
 		/// <summary>
-		/// Get connection to the server, allows client to server comunication, holds send and receiove functionality
+		/// Get connection to the server, allows client to server communication, holds send and receive functionality
 		/// </summary>
 		public TCPConnection getConnection { get { return server.connection; } }
 
 		internal RequestManager requestHandler { get; }
 
 		/// <summary>
-		/// Access to datatypes for custom packets
+		/// Access to data-types for custom packets
 		/// </summary>
 		public ResponseManager responseHandler { get; }
 
@@ -85,7 +85,7 @@ namespace Igor.TCP {
 			}
 			clientInfo.clientID = clientID = buffer[0];
 			
-			byte[] clientInfoArray = Helper.GetBytesFromObject<TCPClientInfo>(clientInfo);
+			byte[] clientInfoArray = Helper.GetBytesFromObject(clientInfo);
 
 			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
 			server = new ConnectionInfo(address, clientID, serverBase, new TCPConnection(serverBase,clientInfo));
@@ -94,7 +94,7 @@ namespace Igor.TCP {
 
 
 		/// <summary>
-		/// Quick setup of client metadata
+		/// Quick setup of client meta-data
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
 		public TCPClientInfo SetUpClientInfo(string clientName = "") {
@@ -110,7 +110,7 @@ namespace Igor.TCP {
 
 
 		/// <summary>
-		/// Set listening for incomming data from connected client 'clientID'
+		/// Set listening for incoming data from connected client 'clientID'
 		/// </summary>
 		public void SetListeningForData(byte clientID, bool state) {
 			server.connection.listeningForData = state;
@@ -127,15 +127,15 @@ namespace Igor.TCP {
 
 
 		/// <summary>
-		/// NIY, no guarantee of safety/funcionality when using this
+		/// NIY, no guarantee of safety/functionality when using this
 		/// </summary>
 		//TODO
 		public void UpdateProp(byte id, object value) {
-			server.connection.SendData(DataIDs.PropertySyncID, id, Helper.GetBytesFromObject<object>(value));
+			server.connection.SendData(DataIDs.PropertySyncID, id, Helper.GetBytesFromObject(value));
 		}
 
 		/// <summary>
-		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transimssion like.
+		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transmission like.
 		/// </summary>
 		public void DefineTwoWayComuncation<TData>(byte ID, Func<TData> function) {
 			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
@@ -143,7 +143,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transimssion like.
+		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transmission like.
 		/// </summary>
 		public void CancelTwoWayComunication(byte ID) {
 			server.connection.dataIDs.requestDict.Remove(ID);

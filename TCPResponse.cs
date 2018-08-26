@@ -3,7 +3,7 @@
 namespace Igor.TCP {
 
 	/// <summary>
-	/// Class conatinging response data to raised request
+	/// Class containing response data to raised request
 	/// </summary>
 	[Serializable]
 	public class TCPResponse {
@@ -28,7 +28,7 @@ namespace Igor.TCP {
 		public byte[] rawData { get; internal set; }
 
 		/// <summary>
-		/// Represents userdefined ID for data reception
+		/// Represents user defined ID for data reception
 		/// </summary>
 		public byte packetID { get; internal set; }
 	}

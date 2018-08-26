@@ -18,7 +18,7 @@ namespace Igor.TCP {
 		internal async Task<TCPResponse> Request(byte ID) {
 			evnt.Reset();
 			if (!connection.dataIDs.requestDict.ContainsKey(ID)) {
-				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, Call 'DefineRequestEntry<TData>(byte clientID, byte ID)' to set it + its response datatype", ID));
+				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, Call 'DefineRequestEntry<TData>(byte clientID, byte ID)' to set it + its response data type", ID));
 			}
 			return await Task.Run(delegate () {
 				byte request = ID;

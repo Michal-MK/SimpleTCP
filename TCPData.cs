@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// Simgle Item from a shop
+	/// Single Item from a shop
 	/// </summary>
 	[Serializable]
 	public struct Item {

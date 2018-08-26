@@ -13,12 +13,12 @@ namespace Igor.TCP {
 
 		private BinaryFormatter bf = new BinaryFormatter();
 		/// <summary>
-		/// Stream on which all transimssion happens
+		/// Stream on which all transmission happens
 		/// </summary>
 		internal NetworkStream stream;
 
 		/// <summary>
-		/// Is client listening for incomming data
+		/// Is client listening for incoming data
 		/// </summary>
 		public bool listeningForData { get; internal set; } = true;
 
@@ -52,7 +52,7 @@ namespace Igor.TCP {
 		internal RequestManager requestHandler { get; }
 
 		/// <summary>
-		/// Access to datatypes for custom packets
+		/// Access to data types for custom packets
 		/// </summary>
 		public ResponseManager responseHandler { get; }
 
@@ -61,7 +61,7 @@ namespace Igor.TCP {
 		internal Thread receiverThread;
 
 		/// <summary>
-		/// Define simple data packets and get internal/externaly defined packet IDs
+		/// Define simple data packets and get internal/externally defined packet IDs
 		/// </summary>
 		public DataIDs dataIDs { get; }
 
@@ -118,7 +118,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		///  Sends packet with id 'packetID' and additional byte 'subPacketID' as a first elemtent of inner array of 'subPacketID' and 'data'
+		///  Sends packet with id 'packetID' and additional byte 'subPacketID' as a first element of inner array of 'subPacketID' and 'data'
 		/// </summary>
 		public void SendData(byte packetID, byte subPacketID, byte[] data) {
 			byte[] merged = new byte[data.Length + 1];
@@ -128,7 +128,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Main Send fuction, send byte[] of 'data' with packet ID 'packetID'
+		/// Main Send function, send byte[] of 'data' with packet ID 'packetID'
 		/// </summary>
 		internal void SendData(byte packetID, byte[] data) {
 			queuedBytes.Enqueue(new Tuple<byte, byte[]>(packetID, data));
@@ -139,6 +139,9 @@ namespace Igor.TCP {
 		/// Send user defined byte[] 'data' with 'dataID' as the first element, sent via <see cref="DataIDs.UserDefined"/> packet ID
 		/// </summary>
 		public void SendUserDefinedData(byte dataID, byte[] data) {
+			if (!dataIDs.idDict.ContainsKey(dataID)) {
+				throw new NotImplementedException("Trying to send data with " + dataID + " with SendUserDefinedData, but this data was not defined!");
+			}
 			byte[] ready = new byte[data.Length + DataIDs.PACKET_ID_COMPLEXITY];
 			ready[0] = dataID;
 			Array.Copy(data, 0, ready, 1, data.Length);
@@ -181,7 +184,7 @@ namespace Igor.TCP {
 
 		#endregion
 
-		#region Data receprion
+		#region Data reception
 
 		internal void DataReception() {
 			while (listeningForData) {

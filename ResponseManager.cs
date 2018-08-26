@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -15,16 +13,12 @@ namespace Igor.TCP {
 		}
 
 		internal void HandleRequest(TCPRequest request, object obj) {
-			BinaryFormatter bf = new BinaryFormatter();
-			using (MemoryStream internalMS = new MemoryStream()) {
-				bf.Serialize(internalMS, obj);
-				byte[] rawData = internalMS.ToArray();
-				byte[] data = new byte[rawData.Length + DataIDs.PACKET_ID_COMPLEXITY];
-				data[0] = request.packetID;
-				rawData.CopyTo(data, 1);
+			byte[] rawData = Helper.GetBytesFromObject(obj);
+			byte[] data = new byte[rawData.Length + DataIDs.PACKET_ID_COMPLEXITY];
+			data[0] = request.packetID;
+			rawData.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
 
-				dataIDs.connection.SendData(DataIDs.ResponseReceptionID, data);
-			}
+			dataIDs.connection.SendData(DataIDs.ResponseReceptionID, data);
 		}
 
 		internal void HandleRequest(TCPRequest request, byte[] data_ready) {

@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// Class holding packet IDs and received data resoluton and unpacking
+	/// Class holding packet IDs and received data resolution and unpacking
 	/// </summary>
 	public class DataIDs {
 		/// <summary>
@@ -27,7 +27,7 @@ namespace Igor.TCP {
 		//TODO
 		public const byte ServerStop = 255;
 		/// <summary>
-		/// Packet ID to signalize clinet disconnect
+		/// Packet ID to signalize client disconnect
 		/// </summary>
 		public const byte ClientDisconnected = 254;
 		/// <summary>
@@ -79,7 +79,7 @@ namespace Igor.TCP {
 		}
 
 		internal Type IndetifyID(byte ID, byte fromClient, byte[] data, out object dataObj) {
-			if (ID == DataIDs.UserDefined) {
+			if (ID == UserDefined) {
 				if (Reroute(data[0], fromClient, data)) {
 					dataObj = null;
 					return null; 
@@ -118,6 +118,7 @@ namespace Igor.TCP {
 						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request.packetID));
 					}
 					object obj = responseDict[requestID].DynamicInvoke(null);
+
 					if (obj is byte[]) {
 						responseManager.HandleRequest(request, obj as byte[]);
 					}

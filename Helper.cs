@@ -6,7 +6,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// Static class constainging useful methods for data transimission
+	/// Static class containing useful methods for data transmission
 	/// </summary>
 	public static class Helper {
 		private static BinaryFormatter bf = new BinaryFormatter();
@@ -22,16 +22,16 @@ namespace Igor.TCP {
 					return endPoint.Address;
 				}
 				catch {
-					throw new WebException("Unable to connect to google proxy", WebExceptionStatus.ConnectFailure);
+					throw new WebException("Unable to connect to Google proxy", WebExceptionStatus.ConnectFailure);
 				}
 			}
 		}
 
 		/// <summary>
 		/// Wrapper to all object to byte[] conversions
-		/// <para>WARNING! When serializing/deserializing custom structures the namespace has to match on both ends!</para> 
+		/// <para>WARNING! When serializing/deserializing custom structures the name-space has to match on both ends!</para> 
 		/// </summary>
-		public static byte[] GetBytesFromObject<T>(object obj) {
+		public static byte[] GetBytesFromObject(object obj) {
 			byte[] bytes;
 
 			if (obj is bool) {
@@ -74,7 +74,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Objects have to be in the same Namespace in order to return an actual object, othervise a byte[] is returned!
+		/// Objects have to be in the same name-space in order to return an actual object, otherwise a byte[] is returned!
 		/// </summary>
 		internal static object GetObject(Type t, byte[] bytes) {
 			object obj;
@@ -129,8 +129,8 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Wrapper to all object to byte[] conversions, includes request ID 'customID' as first element of the array
 		/// </summary>
-		public static byte[] GetBytesFromObject<T>(byte customID, object obj) {
-			byte[] bytes = GetBytesFromObject<T>(obj);
+		public static byte[] GetBytesFromObject(byte customID, object obj) {
+			byte[] bytes = GetBytesFromObject(obj);
 			byte[] result = new byte[1 + bytes.Length];
 			result[0] = customID;
 			Array.Copy(bytes, 0, result, 1, bytes.Length);

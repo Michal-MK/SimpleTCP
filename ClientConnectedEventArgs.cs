@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Igor.TCP {
 	/// <summary>
-	/// OnConnectionReceived event args.
+	/// OnConnectionReceived event arguments
 	/// </summary>
 	public class ClientConnectedEventArgs : EventArgs {
 
@@ -21,7 +21,7 @@ namespace Igor.TCP {
 		public TCPServer myServer { get; }
 
 		/// <summary>
-		/// Basic Information ablut client
+		/// Basic Information about client
 		/// </summary>
 		public TCPClientInfo clientInfo { get; }
 	}
