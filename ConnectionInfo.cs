@@ -3,7 +3,6 @@ using System.Net.Sockets;
 
 namespace Igor.TCP {
 	internal class ConnectionInfo {
-
 		internal ConnectionInfo(IPAddress connectedAddress, byte connectionID, TcpClient baseClient, TCPConnection connection) {
 			this.baseClient = baseClient;
 			this.connectionID = connectionID;

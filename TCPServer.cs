@@ -311,5 +311,20 @@ namespace Igor.TCP {
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
 		}
+
+		/// <summary>
+		/// Send 'data' to all connected clients, sent under <see cref="DataIDs.UserDefined"/> packet.
+		/// </summary>
+		/// <exception cref="UndefinedPacketException"></exception>
+		public void SendToAll<TData>(byte dataID, TData data) {
+			foreach (ConnectionInfo info in connectedClients.Values) {
+				if (info.connection.dataIDs.idDict.ContainsKey(dataID)) {
+					info.connection.SendUserDefinedData(dataID, Helper.GetBytesFromObject(data));
+				}
+				else {
+					throw new UndefinedPacketException("Packet is not defined!", dataID, typeof(TData));
+				}
+			}
+		}
 	}
 }

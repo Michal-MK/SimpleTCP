@@ -45,12 +45,14 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClientConnectedEventArgs.cs" />
-    <Compile Include="ClientDisconnectedEventArgs.cs" />
+    <Compile Include="Events\ClientConnectedEventArgs.cs" />
+    <Compile Include="Events\ClientDisconnectedEventArgs.cs" />
     <Compile Include="ConnectionData.cs" />
     <Compile Include="ConnectionInfo.cs" />
     <Compile Include="DataIDs.cs" />
-    <Compile Include="DataReroutedEventArgs.cs" />
+    <Compile Include="Events\DataReroutedEventArgs.cs" />
+    <Compile Include="Events\PacketReceived.cs" />
+    <Compile Include="Expections\UndefinedPacketException.cs" />
     <Compile Include="Helper.cs" />
     <Compile Include="MyBinder.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

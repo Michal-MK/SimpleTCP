@@ -38,12 +38,12 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Called when successfully received data from <see cref="DataIDs.StringID"></see> marked packet
 		/// </summary>
-		public event EventHandler<string> OnStringReceived;
+		public event EventHandler<PacketReceivedEventArgs<string>> OnStringReceived;
 
 		/// <summary>
 		/// Called when successfully received data from <see cref="DataIDs.Int64ID"></see> marked packet
 		/// </summary>
-		public event EventHandler<Int64> OnInt64Received;
+		public event EventHandler<PacketReceivedEventArgs<Int64>> OnInt64Received;
 
 		internal event EventHandler<TCPResponse> _OnResponse;
 		internal event EventHandler<byte> _OnClientDisconnected;
@@ -179,6 +179,9 @@ namespace Igor.TCP {
 				_OnClientDisconnected?.Invoke(this, 0);
 				sendingData = false;
 				evnt.Set();
+				if (debugPrints) {
+					Console.WriteLine("Client was successfully disconnected");
+				}
 			}
 		}
 
@@ -188,18 +191,18 @@ namespace Igor.TCP {
 
 		internal void DataReception() {
 			while (listeningForData) {
-				Type data = ReceiveData(out object receivedData);
+				Type data = ReceiveData(out object receivedData, out byte fromClient);
 				if (data == typeof(string)) {
 					if (OnStringReceived == null) {
 						throw new NullReferenceException("Other client is sending a string packet, but the OnStringReceived event is not consumed!");
 					}
-					OnStringReceived(this, (string)receivedData);
+					OnStringReceived(this, new PacketReceivedEventArgs<string>((string)receivedData, fromClient));
 				}
 				else if (data == typeof(Int64)) {
 					if (OnInt64Received == null) {
 						throw new NullReferenceException("Other client is sending a Int64(long) packet, but the OnInt64Received event is not consumed!");
 					}
-					OnInt64Received(this, (Int64)receivedData);
+					OnInt64Received(this, new PacketReceivedEventArgs<Int64>((Int64)receivedData, fromClient));
 				}
 				else if (data == typeof(TCPResponse)) {
 					_OnResponse(this, (TCPResponse)receivedData);
@@ -217,7 +220,7 @@ namespace Igor.TCP {
 			}
 		}
 
-		private Type ReceiveData(out object dataObj) {
+		private Type ReceiveData(out object dataObj, out byte packetOrigin) {
 			if (debugPrints) {
 				Console.WriteLine("Waiting for next packet...");
 			}
@@ -249,7 +252,8 @@ namespace Igor.TCP {
 					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
 				}
 			}
-			return dataIDs.IndetifyID(packetID[0], fromClient[0], data, out dataObj);
+			packetOrigin = fromClient[0];
+			return dataIDs.IndetifyID(packetID[0], packetOrigin, data, out dataObj);
 		}
 		#endregion
 
@@ -262,6 +266,7 @@ namespace Igor.TCP {
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
 				evnt.Dispose();
+				requestHandler.Dispose();
 				disposedValue = true;
 			}
 		}

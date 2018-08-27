@@ -1,8 +1,10 @@
-﻿namespace Igor.TCP {
+﻿using System;
+
+namespace Igor.TCP {
 	/// <summary>
 	/// Client Disconnected event data
 	/// </summary>
-	public class ClientDisconnectedEventArgs {
+	public class ClientDisconnectedEventArgs: EventArgs {
 
 		internal ClientDisconnectedEventArgs(byte clientID) {
 			this.clientID = clientID;
