@@ -10,26 +10,43 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Create new response for 'packetID' containing 'rawData'
 		/// </summary>
-		public TCPResponse(byte packetID, byte[] rawData) {
+		internal TCPResponse(byte packetID, byte[] rawData, Type type) {
 			this.packetID = packetID;
 			this.rawData = rawData;
+			dataType = type;
 		}
 		/// <summary>
 		/// Create new response for 'packetID' with no  data
 		/// </summary>
-		public TCPResponse(byte packetID) {
+		internal TCPResponse(byte packetID, Type type) {
 			this.packetID = packetID;
 			this.rawData = null;
+			dataType = type;
 		}
 
 		/// <summary>
-		/// Received bytes from the other side
+		/// Raw byte[] data from the other side, holds requested information
 		/// </summary>
-		public byte[] rawData { get; internal set; }
+		public byte[] rawData { get; }
 
 		/// <summary>
 		/// Represents user defined ID for data reception
 		/// </summary>
-		public byte packetID { get; internal set; }
+		public byte packetID { get; }
+
+		/// <summary>
+		/// The type of data this packet carries
+		/// </summary>
+		public Type dataType { get; }
+
+		/// <summary>
+		/// Attempts conversion to requested type, will fail if the object's name-space differs between Assemblies!
+		/// <para>It is advised to create your own byte[] to object converter</para>
+		/// </summary>
+		public object getObject {
+			get {
+				return Helper.GetObject(dataType, rawData);
+			}
+		}
 	}
 }

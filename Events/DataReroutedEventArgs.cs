@@ -1,7 +1,10 @@
 ﻿using System;
 
 namespace Igor.TCP {
-	internal class DataReroutedEventArgs : EventArgs {
+	/// <summary>
+	/// Basic rerouting information
+	/// </summary>
+	public class DataReroutedEventArgs : EventArgs {
 
 		internal DataReroutedEventArgs(byte forwardedClient, byte universalID, byte[] data, bool isUserDefined) {
 			this.forwardedClient = forwardedClient;
@@ -10,9 +13,21 @@ namespace Igor.TCP {
 			this.isUserDefined = isUserDefined;
 		}
 
-		internal byte forwardedClient { get; }
+		/// <summary>
+		/// The client that will receive this packet
+		/// </summary>
+		public byte forwardedClient { get; }
+
 		internal byte[] data { get; }
-		internal byte universalID { get; }
-		internal bool isUserDefined { get; }
+
+		/// <summary>
+		/// PacketID, if 'isUserDefined' is true, this filed holds the DataID under <see cref="DataIDs.UserDefined"/>
+		/// </summary>
+		public byte universalID { get; }
+
+		/// <summary>
+		/// Is this data defined by user
+		/// </summary>
+		public bool isUserDefined { get; }
 	}
 }

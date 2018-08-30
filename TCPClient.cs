@@ -56,6 +56,14 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
+		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
+		/// </summary>
+		/// <exception cref="WebException"></exception>
+		public TCPClient(IPAddress ipAddress, ushort port)
+			: this(new ConnectionData(ipAddress.ToString(), port)) {
+		}
+
+		/// <summary>
 		/// Initialize new TCPClient by connecting to a server defined in 'data'
 		/// </summary>
 		/// <exception cref="WebException"></exception>

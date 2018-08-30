@@ -35,6 +35,11 @@ namespace Igor.TCP {
 		/// </summary>
 		public event EventHandler<ClientDisconnectedEventArgs> OnClientDisconnected;
 
+		/// <summary>
+		/// Called when server reroutes data
+		/// </summary>
+		public event EventHandler<DataReroutedEventArgs> OnDataRerouted;
+
 
 		#region Start Server
 		/// <summary>
@@ -181,6 +186,7 @@ namespace Igor.TCP {
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
 				connectedClients[e.forwardedClient].connection.SendData(e.isUserDefined ? DataIDs.UserDefined : e.universalID, e.data);
+				OnDataRerouted?.Invoke(this, e);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + e.forwardedClient + " is not connected to the server!");

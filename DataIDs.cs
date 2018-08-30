@@ -82,7 +82,7 @@ namespace Igor.TCP {
 			if (ID == UserDefined) {
 				if (Reroute(data[0], fromClient, data)) {
 					dataObj = null;
-					return null; 
+					return null;
 				}
 			}
 			else if (Reroute(ID, fromClient, data)) {
@@ -107,7 +107,7 @@ namespace Igor.TCP {
 						internalMS.Seek(0, SeekOrigin.Begin);
 						dataObj = Helper.GetObject(t, internalMS.ToArray());
 					}
-					idDict[data[0]].Item2.DynamicInvoke(dataObj);
+					idDict[data[0]].Item2.DynamicInvoke(dataObj, fromClient);
 					return null;
 				}
 				case RequestReceptionID: {
@@ -129,9 +129,7 @@ namespace Igor.TCP {
 					return typeof(TCPRequest);
 				}
 				case ResponseReceptionID: {
-					TCPResponse response = new TCPResponse(data[0]) {
-						rawData = new byte[data.Length - 1]
-					};
+					TCPResponse response = new TCPResponse(data[0], new byte[data.Length - 1], responseManager.GetResponseType(data[0]));
 					Array.Copy(data, 1, response.rawData, 0, data.Length - 1);
 					dataObj = response;
 					return typeof(TCPResponse);
@@ -174,7 +172,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Register custom packet with 'ID' that will carry data of 'TData' type, delivered via 'callback' event
 		/// </summary>
-		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData> callback) {
+		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData, byte> callback) {
 			idDict.Add(ID, new Tuple<Type, Delegate>(typeof(TData), callback));
 		}
 
