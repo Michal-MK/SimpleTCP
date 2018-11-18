@@ -3,7 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	internal class RequestManager : IDisposable{
+	internal class RequestManager : IDisposable {
 		internal TCPConnection connection;
 		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
 
@@ -17,8 +17,9 @@ namespace Igor.TCP {
 
 		internal async Task<TCPResponse> Request(byte ID) {
 			evnt.Reset();
-			if (!connection.dataIDs.requestDict.ContainsKey(ID)) {
-				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, Call 'DefineRequestEntry<TData>(byte clientID, byte ID)' to set it + its response data type", ID));
+			if (!connection.dataIDs.requestTypeMap.ContainsKey(ID)) {
+				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, " +
+					"Call 'DefineRequestEntry<TData>(byte clientID, byte ID)' to set it + its response data type", ID));
 			}
 			return await Task.Run(delegate () {
 				byte request = ID;
@@ -36,8 +37,28 @@ namespace Igor.TCP {
 
 		#endregion
 
-		public void Dispose() {
-			evnt.Dispose();
+
+		#region IDisposable Support
+		private bool disposedValue = false; // To detect redundant calls
+
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				//if (disposing) {
+				//}
+				evnt.Dispose();
+				disposedValue = true;
+			}
 		}
+
+		 ~RequestManager() {
+			Dispose(false);
+		}
+
+		// This code added to correctly implement the disposable pattern.
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
 	}
 }

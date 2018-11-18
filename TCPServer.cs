@@ -5,25 +5,36 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Reflection;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Igor.TCP {
+
 	/// <summary>
-	/// TCP Server, accepts client connections
+	/// TCP Server instance. Accepts client connections
 	/// </summary>
 	public class TCPServer {
-		/// <summary>
-		/// Used by packets coming from the server TODO
-		/// </summary>
-		public const byte ServerPacketOrigin = 254;
 
 		private TcpListener clientConnectionListener;
 
-		private Dictionary<byte, ConnectionInfo> connectedClients = new Dictionary<byte, ConnectionInfo>();
+		private Dictionary<byte, ServerToClientConnection> connectedClients = new Dictionary<byte, ServerToClientConnection>();
 
 		internal bool listenForClientConnections = false;
 
 		private IPAddress currentAddress;
 		private ushort currentPort;
+
+		private ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
+
+
+		/// <summary>
+		/// Client ID used by packets that come from the server
+		/// </summary>
+		public const byte ServerPacketOrigin = 240;
+
+		/// <summary>
+		/// Configuration of this server
+		/// </summary>
+		public ServerConfiguration serverConfiguration { get; }
 
 		/// <summary>
 		/// Called when client connects to this server
@@ -40,27 +51,42 @@ namespace Igor.TCP {
 		/// </summary>
 		public event EventHandler<DataReroutedEventArgs> OnDataRerouted;
 
+		/// <summary>
+		/// Called when the server successfully starts
+		/// </summary>
+		public event EventHandler OnServerStarted;
 
-		#region Start Server
+
+		/// <summary>
+		/// Create new <see cref="TCPServer"/>
+		/// </summary>
+		public TCPServer(ServerConfiguration configuration) {
+			serverConfiguration = configuration;
+		}
+
+		#region Start/Stop Server
+
 		/// <summary>
 		/// Start server using specified 'port' and internally found IP
 		/// </summary>
-		public void Start(ushort port) {
+		/// <exception cref="ServerStartException"></exception>
+		public async Task Start(ushort port) {
 			currentAddress = Helper.GetActiveIPv4Address();
 			currentPort = port;
-			StartServer(currentAddress, port);
+			await StartServer(currentAddress, port);
 		}
 
 		/// <summary>
 		/// Start server using specified 'port' and explicitly specified 'ipAddress'
 		/// </summary>
+		/// <exception cref="ServerStartException"></exception>
 		public void Start(string ipAddress, ushort port) {
 			if (IPAddress.TryParse(ipAddress, out currentAddress)) {
 				currentPort = port;
 				StartServer(currentAddress, port);
 			}
 			else {
-				Console.WriteLine("Unable to parse ip address string '{0}'", ipAddress);
+				Console.WriteLine("Unable to parse IP address string '{0}'", ipAddress);
 				return;
 			}
 		}
@@ -68,25 +94,54 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Start server using specified 'port' and explicitly specified 'ipAddress'
 		/// </summary>
+		/// <exception cref="ServerStartException"></exception>
 		public void Start(IPAddress address, ushort port) {
 			StartServer(address, port);
 		}
 
-
-		private void StartServer(IPAddress address, ushort port) {
-			Console.WriteLine(address);
-			listenForClientConnections = true;
-			new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
+		/// <summary>
+		/// Actual server starting function
+		/// </summary>
+		/// <exception cref="ServerStartException"></exception>
+		private Task StartServer(IPAddress address, ushort port) {
+			try {
+				return Task.Run(() => {
+					Console.WriteLine(address);
+					listenForClientConnections = true;
+					new Thread(new ThreadStart(async delegate () { await ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
+					serverStartEvnt.Wait();
+					OnServerStarted?.Invoke(this, EventArgs.Empty);
+				});
+			}
+			catch {
+				throw new ServerStartException("Unable to start server at " + address.ToString() + ":" + port);
+			}
 		}
-		#endregion
 
 		/// <summary>
-		/// Get client connection by ID
+		/// Stops the server
+		/// </summary>
+		public async Task Stop() {
+			await Task.Run(delegate () {
+				listenForClientConnections = false;
+				clientConnectionListener.Stop();
+				foreach (ServerToClientConnection connection in connectedClients.Values.ToArray()) {
+					connection.DisconnectClient(connection.clientInfo.clientID);
+				}
+			});
+		}
+
+		#endregion
+
+		#region Getting connections to the server
+
+		/// <summary>
+		/// Get client connection by ID, NPE if client id is not found/connected
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(byte id) {
 			if (connectedClients.ContainsKey(id)) {
-				return connectedClients[id].connection;
+				return connectedClients[id];
 			}
 			throw new NullReferenceException("Client with ID " + id + " is not connected to the server!");
 		}
@@ -97,8 +152,8 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.connectedAddress == address) {
-					return item.Value.connection;
+				if (item.Value.clientInfo.clientAddress == address) {
+					return item.Value;
 				}
 			}
 			throw new NullReferenceException("This IP address is not currently connected");
@@ -110,16 +165,18 @@ namespace Igor.TCP {
 		public TCPClientInfo[] getConnectedClients {
 			get {
 				TCPClientInfo[] connections = new TCPClientInfo[connectedClients.Keys.Count];
-				Dictionary<byte, ConnectionInfo>.Enumerator enumer = connectedClients.GetEnumerator();
+				Dictionary<byte, ServerToClientConnection>.Enumerator enumer = connectedClients.GetEnumerator();
 				int i = 0;
 				while (enumer.MoveNext()) {
-					KeyValuePair<byte, ConnectionInfo> kv = enumer.Current;
-					connections[i] = kv.Value.connection.clientInfo;
+					KeyValuePair<byte, ServerToClientConnection> kv = enumer.Current;
+					connections[i] = kv.Value.clientInfo;
 					i++;
 				}
 				return connections;
 			}
 		}
+
+		#endregion
 
 
 		/// <summary>
@@ -128,32 +185,36 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void SetListeningForData(byte clientID, bool state) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.listeningForData = state;
+				connectedClients[clientID].listeningForData = state;
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
 		}
 
-
 		/// <summary>
 		/// Set listening for incoming client connection attempts
 		/// </summary>
-		public void SetIncommingClientConnection(bool state) {
-			if (!listenForClientConnections) {
-				StartServer(currentAddress, currentPort);
+		public bool isListeningForClients {
+			get {
+				return listenForClientConnections;
 			}
-			if (!state) {
-				listenForClientConnections = state;
-				clientConnectionListener.Stop();
+			set {
+				if (!listenForClientConnections && value) {
+					StartServer(currentAddress, currentPort);
+				}
+				if (!value) {
+					clientConnectionListener.Stop();
+				}
+				listenForClientConnections = value;
 			}
 		}
 
-
-		private void ListenForClientConnection(IPAddress address, ushort port) {
+		private async Task ListenForClientConnection(IPAddress address, ushort port) {
 			clientConnectionListener = new TcpListener(address, port);
 			clientConnectionListener.Start();
+			serverStartEvnt.Set();
 			while (listenForClientConnections) {
-				TcpClient newlyConnected = clientConnectionListener.AcceptTcpClient();
+				TcpClient newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
 				byte ID = (byte)connectedClients.Count;
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
@@ -161,18 +222,9 @@ namespace Igor.TCP {
 
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
 				TCPClientInfo info = (TCPClientInfo)Helper.GetObject(typeof(TCPClientInfo), clientInfo);
-				TCPConnection connection = new TCPConnection(newlyConnected, info);
-				connection.tcpClientIdentifier = ServerPacketOrigin;
-				connection.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
-				connection._OnClientDisconnected += ClientDisconnected;
-
-				ConnectionInfo conn = new ConnectionInfo(
-					((IPEndPoint)newlyConnected.Client.RemoteEndPoint).Address,
-					ID,
-					newlyConnected,
-					connection
-				);
-
+				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, info, this);
+				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
+				conn._OnClientDisconnected += ClientDisconnected;
 				connectedClients.Add(ID, conn);
 				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, info));
 			}
@@ -185,7 +237,7 @@ namespace Igor.TCP {
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
-				connectedClients[e.forwardedClient].connection.SendData(e.isUserDefined ? DataIDs.UserDefined : e.universalID, e.data);
+				connectedClients[e.forwardedClient]._SendData(e.universalID, e.data);
 				OnDataRerouted?.Invoke(this, e);
 				return;
 			}
@@ -199,7 +251,7 @@ namespace Igor.TCP {
 		public void SyncPropery<TProp>(byte clientID, object instance, TProp property, byte propID) {
 			PropertyInfo info = property.GetType().GetProperty(property.GetType().Name, typeof(TProp));
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.syncProps.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
+				connectedClients[clientID].dataIDs.syncedProperties.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -211,20 +263,22 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void UpdateProp(byte clientID, byte ID, object value) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.SendData(DataIDs.PropertySyncID, ID, Helper.GetBytesFromObject(value));
+				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ID, Helper.GetBytesFromObject(value));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
 		}
 
+		#region Communication Definitions
+
 		/// <summary>
 		/// Shorthand for Request and response id definition, when both sides are senders 
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void DefineTwoWayComunication<TData>(byte clientID, byte ID, Func<TData> function) {
+		public void DefineTwoWayComunication<TData>(byte clientID, byte packetID, Func<TData> function) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.requestDict.Add(ID, typeof(TData));
-				connectedClients[clientID].connection.dataIDs.responseDict.Add(ID, function);
+				connectedClients[clientID].dataIDs.requestTypeMap.Add(packetID, typeof(TData));
+				connectedClients[clientID].dataIDs.responseFunctionMap.Add(packetID, function);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -234,10 +288,10 @@ namespace Igor.TCP {
 		/// Cancel two way communication for client 'clientID' with id 'ID'
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void CancelTwoWayComunication(byte clientID, byte ID) {
+		public void CancelTwoWayComunication(byte clientID, byte packetID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.requestDict.Remove(ID);
-				connectedClients[clientID].connection.dataIDs.responseDict.Remove(ID);
+				connectedClients[clientID].dataIDs.requestTypeMap.Remove(packetID);
+				connectedClients[clientID].dataIDs.responseFunctionMap.Remove(packetID);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -249,7 +303,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void DefineRequestEntry<TData>(byte clientID, byte ID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.requestDict.Add(ID, typeof(TData));
+				connectedClients[clientID].dataIDs.requestTypeMap.Add(ID, typeof(TData));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -261,7 +315,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void CancelRequestID(byte clientID, byte ID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.requestDict.Remove(ID);
+				connectedClients[clientID].dataIDs.requestTypeMap.Remove(ID);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -273,7 +327,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void DefineResponseEntry<TData>(byte clientID, byte ID, Func<TData> function) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.responseDict.Add(ID, function);
+				connectedClients[clientID].dataIDs.responseFunctionMap.Add(ID, function);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -285,7 +339,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void CancelResponseID(byte clientID, byte ID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].connection.dataIDs.responseDict.Remove(ID);
+				connectedClients[clientID].dataIDs.responseFunctionMap.Remove(ID);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -293,19 +347,14 @@ namespace Igor.TCP {
 
 		/// <summary>
 		/// Define rerouting of all packets from 'fromClient' coming to this server to under 'packetID' to be sent to 'toClient'
-		/// <para>If 'dataID' is provided, 'packetID' is replaced by <see cref="DataIDs.UserDefined"/> constant value.</para>
 		/// </summary>
-		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID, byte? dataID = null) {
+		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID) {
 			ReroutingInfo info = new ReroutingInfo(fromClient, toClient);
-			if (dataID != null) {
-				info.SetPacketInfoUserDefined(dataID.Value);
-				DataIDs.AddToReroute(dataID.Value, info);
-			}
-			else {
-				info.SetPacketInfo(packetID);
-				DataIDs.AddToReroute(packetID, info);
-			}
+			info.SetPacketInfo(packetID);
+			DataIDs.AddToReroute(packetID, info);
 		}
+
+		#endregion
 
 		/// <summary>
 		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
@@ -313,7 +362,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public async Task<TCPResponse> RaiseRequestAsync(byte clientID, byte ID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				return await connectedClients[clientID].connection.requestHandler.Request(ID);
+				return await connectedClients[clientID].requestHandler.Request(ID);
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
 		}
@@ -323,9 +372,9 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="UndefinedPacketException"></exception>
 		public void SendToAll<TData>(byte dataID, TData data) {
-			foreach (ConnectionInfo info in connectedClients.Values) {
-				if (info.connection.dataIDs.idDict.ContainsKey(dataID)) {
-					info.connection.SendUserDefinedData(dataID, Helper.GetBytesFromObject(data));
+			foreach (ServerToClientConnection info in connectedClients.Values) {
+				if (info.dataIDs.customIDs.ContainsKey(dataID)) {
+					info._SendData(dataID, Helper.GetBytesFromObject(data));
 				}
 				else {
 					throw new UndefinedPacketException("Packet is not defined!", dataID, typeof(TData));

@@ -2,7 +2,7 @@
 
 namespace Igor.TCP {
 	/// <summary>
-	/// Holds ip address and port for connection
+	/// Holds IP address and port for connection
 	/// </summary>
 	[Serializable]
 	public class ConnectionData {

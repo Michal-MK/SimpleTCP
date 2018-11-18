@@ -17,7 +17,6 @@ namespace Igor.TCP {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
-		private ConnectionInfo server;
 		/// <summary>
 		/// Information about this client
 		/// </summary>
@@ -26,26 +25,17 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Get connection to the server, allows client to server communication, holds send and receive functionality
 		/// </summary>
-		public TCPConnection getConnection { get { return server.connection; } }
-
-		internal RequestManager requestHandler { get; }
-
-		/// <summary>
-		/// Access to data-types for custom packets
-		/// </summary>
-		public ResponseManager responseHandler { get; }
+		public ClientToServerConnection getConnection { get; private set; }
 
 		/// <summary>
 		/// Get ID this client was assigned by the server
 		/// </summary>
 		public byte clientID { get; private set; }
 
-
 		/// <summary>
 		/// Log debug information into the console
 		/// </summary>
 		public bool debugPrints { get; set; } = false;
-
 
 		/// <summary>
 		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
@@ -77,27 +67,27 @@ namespace Igor.TCP {
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
+			clientInfo = new TCPClientInfo(Environment.UserName, false, Helper.GetActiveIPv4Address());
 		}
-		
+
 		/// <summary>
 		/// Connect to server with specified IP and port
 		/// </summary>
 		public void Connect() {
-			TcpClient serverBase = new TcpClient();
-			serverBase.Connect(address, port);
+			TcpClient clientBase = new TcpClient();
+			clientBase.Connect(address, port);
 			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
-			NetworkStream stream = serverBase.GetStream();
+			NetworkStream stream = clientBase.GetStream();
 			stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-			if(clientInfo == null) {
-				clientInfo = SetUpClientInfo();
-			}
 			clientInfo.clientID = clientID = buffer[0];
-			
+
 			byte[] clientInfoArray = Helper.GetBytesFromObject(clientInfo);
 
 			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
-			server = new ConnectionInfo(address, clientID, serverBase, new TCPConnection(serverBase,clientInfo));
-			Console.WriteLine("Connection Established");
+			getConnection = new ClientToServerConnection(clientBase, clientInfo, this);
+			if (debugPrints) {
+				Console.WriteLine("Connection Established");
+			}
 		}
 
 
@@ -105,14 +95,10 @@ namespace Igor.TCP {
 		/// Quick setup of client meta-data
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
-		public TCPClientInfo SetUpClientInfo(string clientName = "") {
-			if (clientName == "") {
-				clientInfo = new TCPClientInfo(Environment.UserName, false, address);
-			}
-			else {
-				clientInfo = new TCPClientInfo(clientName, false, address);
-			}
-			clientInfo.clientID = clientID;
+		public TCPClientInfo SetUpClientInfo(string clientName) {
+			clientInfo = new TCPClientInfo(clientName, false, address) {
+				clientID = clientID
+			};
 			return clientInfo;
 		}
 
@@ -120,8 +106,9 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Set listening for incoming data from connected client 'clientID'
 		/// </summary>
-		public void SetListeningForData(byte clientID, bool state) {
-			server.connection.listeningForData = state;
+		public bool isListeningForData {
+			get { return getConnection.listeningForData; }
+			set { getConnection.listeningForData = value; }
 		}
 
 
@@ -130,76 +117,76 @@ namespace Igor.TCP {
 		/// </summary>
 		public void SyncPropery(object instance, string propertyName, byte propID) {
 			PropertyInfo info = instance.GetType().GetProperty(propertyName);
-			server.connection.dataIDs.syncProps.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
+			getConnection.dataIDs.syncedProperties.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
 		}
 
-
-		/// <summary>
-		/// NIY, no guarantee of safety/functionality when using this
-		/// </summary>
-		//TODO
-		public void UpdateProp(byte id, object value) {
-			server.connection.SendData(DataIDs.PropertySyncID, id, Helper.GetBytesFromObject(value));
-		}
+		#region Communication Definitions
 
 		/// <summary>
 		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transmission like.
 		/// </summary>
-		public void DefineTwoWayComuncation<TData>(byte ID, Func<TData> function) {
-			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
-			server.connection.dataIDs.responseDict.Add(ID, function);
+		public void DefineTwoWayComunication<TData>(byte packetID, Func<TData> function) {
+			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(TData));
+			getConnection.dataIDs.responseFunctionMap.Add(packetID, function);
 		}
 
 		/// <summary>
 		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transmission like.
 		/// </summary>
-		public void CancelTwoWayComunication(byte ID) {
-			server.connection.dataIDs.requestDict.Remove(ID);
-			server.connection.dataIDs.responseDict.Remove(ID);
+		public void CancelTwoWayComunication(byte packetID) {
+			getConnection.dataIDs.requestTypeMap.Remove(packetID);
+			getConnection.dataIDs.responseFunctionMap.Remove(packetID);
 		}
 
 		/// <summary>
 		/// Define custom request by specifying its 'TData' type with selected 'ID'
 		/// </summary>
 		public void DefineRequestEntry<TData>(byte ID) {
-			server.connection.dataIDs.requestDict.Add(ID, typeof(TData));
+			getConnection.dataIDs.requestTypeMap.Add(ID, typeof(TData));
 		}
 
 		/// <summary>
 		/// Cancel custom request of 'TData' under 'ID'
 		/// </summary>
 		public void CancelRequestID(byte ID) {
-			server.connection.dataIDs.requestDict.Remove(ID);
+			getConnection.dataIDs.requestTypeMap.Remove(ID);
 		}
 
 		/// <summary>
 		/// Define response 'function' to be called when request packet with 'ID' is received
 		/// </summary>
 		public void DefineResponseEntry<TData>(byte ID, Func<TData> function) {
-			server.connection.dataIDs.responseDict.Add(ID, function);
+			getConnection.dataIDs.responseFunctionMap.Add(ID, function);
 		}
 
 		/// <summary>
 		/// Cancel response to request with 'ID'
 		/// </summary>
 		public void CancelResponseID(byte ID) {
-			server.connection.dataIDs.responseDict.Remove(ID);
+			getConnection.dataIDs.responseFunctionMap.Remove(ID);
 		}
+
+		#endregion
 
 		/// <summary>
 		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
 		/// </summary>
 		public async Task<TCPResponse> RaiseRequestAsync(byte ID) {
-			TCPResponse data = await requestHandler.Request(ID);
+			TCPResponse data = await getConnection.requestHandler.Request(ID);
 			return data;
 		}
 
 		/// <summary>
-		/// Disconnect from current server
+		/// Disconnect from current server and dispose of this client
 		/// </summary>
+		/// <exception cref="NullReferenceException"></exception>
 		public void Disconnect() {
 			if (getConnection != null) {
-				getConnection.Dispose(clientID);
+				getConnection.DisconnectFromServer(clientID);
+				getConnection = null;
+			}
+			else {
+				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything");
 			}
 		}
 	}

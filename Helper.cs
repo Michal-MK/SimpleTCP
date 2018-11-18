@@ -66,7 +66,9 @@ namespace Igor.TCP {
 			}
 			else {
 				using (MemoryStream ms = new MemoryStream()) {
+					bf.Binder = new MyBinder();
 					bf.Serialize(ms, obj);
+					ms.Seek(0, SeekOrigin.Begin);
 					bytes = ms.ToArray();
 				}
 			}
@@ -161,17 +163,12 @@ namespace Igor.TCP {
 			return ret;
 		}
 
-
 		internal static void SaveArrayToFile(string file, byte[] array) {
 			using (StreamWriter sw = File.CreateText(file)) {
 				foreach (byte b in array) {
 					sw.Write(b + ",");
 				}
 			}
-		}
-
-		internal static string BytesToString(byte[] bytes) {
-			return System.Text.Encoding.UTF8.GetString(bytes);
 		}
 	}
 }
