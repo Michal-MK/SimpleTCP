@@ -69,8 +69,8 @@ namespace Igor.TCP {
 
 		#endregion
 
-		internal readonly Dictionary<byte, Tuple<Type, Delegate>> customIDs = new Dictionary<byte, Tuple<Type, Delegate>>();
-		internal readonly Dictionary<byte, Tuple<object, PropertyInfo>> syncedProperties = new Dictionary<byte, Tuple<object, PropertyInfo>>();
+		internal readonly Dictionary<byte, CustomPacket> customIDs = new Dictionary<byte, CustomPacket>();
+		internal readonly Dictionary<byte, PropertySynchronization> syncedProperties = new Dictionary<byte, PropertySynchronization>();
 
 
 		internal readonly Dictionary<byte, Type> requestTypeMap = new Dictionary<byte, Type>();
@@ -110,7 +110,6 @@ namespace Igor.TCP {
 					if (!responseFunctionMap.ContainsKey(requestID)) {
 						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request.packetID));
 					}
-					//if((responseManager.connection as ClientToServerConnection)?.HigherLevelDataReceived(new ReceivedData(typeof(TCPRequest),fromClient,ID,null))
 					object obj = responseFunctionMap[requestID].DynamicInvoke(null);
 
 					if (obj is byte[]) {
@@ -131,7 +130,8 @@ namespace Igor.TCP {
 				case PropertySyncID: {
 					byte[] realData = new byte[data.Length - 1];
 					Array.Copy(data, 1, realData, 0, realData.Length);
-					syncedProperties[data[0]].Item2.SetValue(syncedProperties[data[0]].Item1, Helper.GetObject(syncedProperties[data[0]].Item2.PropertyType, realData));
+					syncedProperties[data[0]].property.SetValue(syncedProperties[data[0]].classInstance,
+						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
 					dataObj = null;
 					return typeof(TCPRequest);
 				}
@@ -141,9 +141,9 @@ namespace Igor.TCP {
 				}
 				default: {
 					if (customIDs.ContainsKey(ID)) {
-						Type t = customIDs[ID].Item1;
-						dataObj = Helper.GetObject(t, data);
-						customIDs[ID].Item2.DynamicInvoke(dataObj, fromClient);
+						Type t = customIDs[ID].dataType;
+						dataObj = SimpleTCPHelper.GetObject(t, data);
+						customIDs[ID].action.Invoke(dataObj, fromClient);
 						return null;
 					}
 					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID));
@@ -156,14 +156,14 @@ namespace Igor.TCP {
 			if (rerouter.ContainsKey(ID)) {
 				ReroutingInfo info = null;
 				for (int i = 0; i < rerouter[ID].Count; i++) {
-					if (rerouter[ID][i].fromClient == fromClient) {
+					if (rerouter[ID][i].fromClient == fromClient && responseManager.connection.myInfo.clientID != rerouter[ID][i].toClient) {
 						info = rerouter[ID][i];
 					}
 				}
 				if (info == null) {
 					return false;
 				}
-				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, (info.isUserDefined ? info.dataID : info.packetID), data, info.isUserDefined));
+				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, fromClient, (info.isUserDefined ? info.dataID : info.packetID), data, info.isUserDefined));
 				return true;
 			}
 			return false;
@@ -173,7 +173,7 @@ namespace Igor.TCP {
 		/// Register custom packet with 'ID' that will carry data of 'TData' type, delivered via 'callback' event
 		/// </summary>
 		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData, byte> callback) {
-			customIDs.Add(ID, new Tuple<Type, Delegate>(typeof(TData), callback));
+			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<object, byte>((o,b) => { callback((TData)o,b); })));
 		}
 
 		/// <summary>

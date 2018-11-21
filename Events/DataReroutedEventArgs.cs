@@ -6,8 +6,9 @@ namespace Igor.TCP {
 	/// </summary>
 	public class DataReroutedEventArgs : EventArgs {
 
-		internal DataReroutedEventArgs(byte forwardedClient, byte universalID, byte[] data, bool isUserDefined) {
+		internal DataReroutedEventArgs(byte forwardedClient, byte originClient, byte universalID, byte[] data, bool isUserDefined) {
 			this.forwardedClient = forwardedClient;
+			this.originClient = originClient;
 			this.data = data;
 			this.universalID = universalID;
 			this.isUserDefined = isUserDefined;
@@ -17,6 +18,11 @@ namespace Igor.TCP {
 		/// The client that will receive this packet
 		/// </summary>
 		public byte forwardedClient { get; }
+
+		/// <summary>
+		/// The client sent this packet
+		/// </summary>
+		public byte originClient { get; }
 
 		internal byte[] data { get; }
 

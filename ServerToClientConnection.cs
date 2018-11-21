@@ -12,7 +12,8 @@ namespace Igor.TCP {
 
 		internal TCPServer server;
 
-		internal ServerToClientConnection(TcpClient client, TCPClientInfo clientInfo, TCPServer server) : base(client, clientInfo) {
+		internal ServerToClientConnection(TcpClient client,TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
+			: base(client, serverInfo, clientInfo) {
 			this.server = server;
 		}
 
@@ -26,7 +27,7 @@ namespace Igor.TCP {
 			if (data.dataID == DataIDs.ClientDisconnected) {
 				_OnClientDisconnected.Invoke(this, data.senderID);
 			}
-			if(data.dataID == DataIDs.ServerStop && server.serverConfiguration.clientCanShutdownServer) {
+			if (data.dataID == DataIDs.ServerStop && server.serverConfiguration.clientCanShutdownServer) {
 				Task.Run(server.Stop);
 			}
 		}
@@ -42,6 +43,13 @@ namespace Igor.TCP {
 				listeningForData = false;
 				Dispose();
 			}
+		}
+
+		/// <summary>
+		/// Enqueue data to be rerouted to the sender queue, will retain original sender ID
+		/// </summary>
+		internal void _SendDataRerouted(byte universalID, byte originID, byte[] data) {
+			EnquqeAndSend(new SendQueueItem(universalID, originID, data, true));
 		}
 	}
 }

@@ -28,11 +28,6 @@ namespace Igor.TCP {
 		public ClientToServerConnection getConnection { get; private set; }
 
 		/// <summary>
-		/// Get ID this client was assigned by the server
-		/// </summary>
-		public byte clientID { get; private set; }
-
-		/// <summary>
 		/// Log debug information into the console
 		/// </summary>
 		public bool debugPrints { get; set; } = false;
@@ -67,7 +62,7 @@ namespace Igor.TCP {
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
-			clientInfo = new TCPClientInfo(Environment.UserName, false, Helper.GetActiveIPv4Address());
+			clientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address());
 		}
 
 		/// <summary>
@@ -79,12 +74,15 @@ namespace Igor.TCP {
 			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 			NetworkStream stream = clientBase.GetStream();
 			stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-			clientInfo.clientID = clientID = buffer[0];
+			clientInfo.clientID = buffer[0];
 
-			byte[] clientInfoArray = Helper.GetBytesFromObject(clientInfo);
+			byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(clientInfo);
 
 			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
-			getConnection = new ClientToServerConnection(clientBase, clientInfo, this);
+
+			TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address);
+			serverInfo.clientID = 0;
+			getConnection = new ClientToServerConnection(clientBase, clientInfo, serverInfo, this);
 			if (debugPrints) {
 				Console.WriteLine("Connection Established");
 			}
@@ -96,9 +94,7 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
 		public TCPClientInfo SetUpClientInfo(string clientName) {
-			clientInfo = new TCPClientInfo(clientName, false, address) {
-				clientID = clientID
-			};
+			clientInfo = new TCPClientInfo(clientName, false, address);
 			return clientInfo;
 		}
 
@@ -116,8 +112,7 @@ namespace Igor.TCP {
 		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
 		public void SyncPropery(object instance, string propertyName, byte propID) {
-			PropertyInfo info = instance.GetType().GetProperty(propertyName);
-			getConnection.dataIDs.syncedProperties.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
+			getConnection.dataIDs.syncedProperties.Add(propID, new PropertySynchronization(propID,instance,propertyName));
 		}
 
 		#region Communication Definitions
@@ -182,7 +177,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void Disconnect() {
 			if (getConnection != null) {
-				getConnection.DisconnectFromServer(clientID);
+				getConnection.DisconnectFromServer(clientInfo.clientID);
 				getConnection = null;
 			}
 			else {

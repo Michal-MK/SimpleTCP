@@ -29,7 +29,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Client ID used by packets that come from the server
 		/// </summary>
-		public const byte ServerPacketOrigin = 240;
+		public const byte ServerPacketOrigin = 0;
 
 		/// <summary>
 		/// Configuration of this server
@@ -71,7 +71,7 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="ServerStartException"></exception>
 		public async Task Start(ushort port) {
-			currentAddress = Helper.GetActiveIPv4Address();
+			currentAddress = SimpleTCPHelper.GetActiveIPv4Address();
 			currentPort = port;
 			await StartServer(currentAddress, port);
 		}
@@ -126,7 +126,7 @@ namespace Igor.TCP {
 				listenForClientConnections = false;
 				clientConnectionListener.Stop();
 				foreach (ServerToClientConnection connection in connectedClients.Values.ToArray()) {
-					connection.DisconnectClient(connection.clientInfo.clientID);
+					connection.DisconnectClient(connection.connectedClientInfo.clientID);
 				}
 			});
 		}
@@ -143,6 +143,9 @@ namespace Igor.TCP {
 			if (connectedClients.ContainsKey(id)) {
 				return connectedClients[id];
 			}
+			if (id == 0) {
+				throw new InvalidOperationException("ID '0' is reserved to the server, client numbering starts from '1'!");
+			}
 			throw new NullReferenceException("Client with ID " + id + " is not connected to the server!");
 		}
 
@@ -152,7 +155,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.clientInfo.clientAddress == address) {
+				if (item.Value.connectedClientInfo.clientAddress == address) {
 					return item.Value;
 				}
 			}
@@ -169,7 +172,7 @@ namespace Igor.TCP {
 				int i = 0;
 				while (enumer.MoveNext()) {
 					KeyValuePair<byte, ServerToClientConnection> kv = enumer.Current;
-					connections[i] = kv.Value.clientInfo;
+					connections[i] = kv.Value.connectedClientInfo;
 					i++;
 				}
 				return connections;
@@ -215,18 +218,20 @@ namespace Igor.TCP {
 			serverStartEvnt.Set();
 			while (listenForClientConnections) {
 				TcpClient newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
-				byte ID = (byte)connectedClients.Count;
+				byte ID = (byte)(connectedClients.Count + 1);
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 				byte[] clientInfo = new byte[1024];
 
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
-				TCPClientInfo info = (TCPClientInfo)Helper.GetObject(typeof(TCPClientInfo), clientInfo);
-				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, info, this);
+				TCPClientInfo connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
+				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address());
+				serverInfo.clientID = 0;
+				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
 				connectedClients.Add(ID, conn);
-				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, info));
+				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
 			}
 		}
 
@@ -237,7 +242,7 @@ namespace Igor.TCP {
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
-				connectedClients[e.forwardedClient]._SendData(e.universalID, e.data);
+				connectedClients[e.forwardedClient]._SendDataRerouted(e.universalID, e.originClient, e.data);
 				OnDataRerouted?.Invoke(this, e);
 				return;
 			}
@@ -248,10 +253,9 @@ namespace Igor.TCP {
 		/// Define 'propID' for synchronization of public property for client 'clientID' named 'propetyName' from instance of a class 'instance', publish changes by calling UpdateProp()
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void SyncPropery<TProp>(byte clientID, object instance, TProp property, byte propID) {
-			PropertyInfo info = property.GetType().GetProperty(property.GetType().Name, typeof(TProp));
+		public void SyncPropery(byte clientID, object instance, string propertyName, byte propID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.syncedProperties.Add(propID, new Tuple<object, PropertyInfo>(instance, info));
+				connectedClients[clientID].dataIDs.syncedProperties.Add(propID, new PropertySynchronization(propID, instance, propertyName));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -263,7 +267,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void UpdateProp(byte clientID, byte ID, object value) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ID, Helper.GetBytesFromObject(value));
+				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ID, SimpleTCPHelper.GetBytesFromObject(value));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -374,7 +378,7 @@ namespace Igor.TCP {
 		public void SendToAll<TData>(byte dataID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
 				if (info.dataIDs.customIDs.ContainsKey(dataID)) {
-					info._SendData(dataID, Helper.GetBytesFromObject(data));
+					info._SendData(dataID, 0, SimpleTCPHelper.GetBytesFromObject(data));
 				}
 				else {
 					throw new UndefinedPacketException("Packet is not defined!", dataID, typeof(TData));

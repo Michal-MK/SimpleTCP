@@ -45,7 +45,7 @@ namespace Igor.TCP {
 		/// </summary>
 		public object getObject {
 			get {
-				return Helper.GetObject(dataType, rawData);
+				return SimpleTCPHelper.GetObject(dataType, rawData);
 			}
 		}
 	}

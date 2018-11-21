@@ -13,7 +13,7 @@ namespace Igor.TCP {
 		}
 
 		internal void HandleRequest(TCPRequest request, object obj) {
-			byte[] rawData = Helper.GetBytesFromObject(obj);
+			byte[] rawData = SimpleTCPHelper.GetBytesFromObject(obj);
 			HandleRequest(request, rawData);
 		}
 
@@ -22,7 +22,7 @@ namespace Igor.TCP {
 			data[0] = request.packetID;
 			data_ready.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
 
-			connection._SendData(DataIDs.ResponseReceptionID, data);
+			connection._SendData(DataIDs.ResponseReceptionID, connection.myInfo.clientID, data);
 		}
 
 		/// <summary>

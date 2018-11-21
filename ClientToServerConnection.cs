@@ -10,7 +10,8 @@ namespace Igor.TCP {
 
 		internal TCPClient client;
 
-		internal ClientToServerConnection(TcpClient server, TCPClientInfo serverInfo, TCPClient client) : base(server, serverInfo) {
+		internal ClientToServerConnection(TcpClient server, TCPClientInfo myInfo, TCPClientInfo serverInfo, TCPClient client)
+			: base(server, myInfo, serverInfo) {
 			this.client = client;
 		}
 
@@ -28,7 +29,7 @@ namespace Igor.TCP {
 		/// <param name="data"></param>
 		public override void HigherLevelDataReceived(ReceivedData data) {
 			if (data.dataID == DataIDs.ClientDisconnected) {
-				_OnClientKickedFromServer.Invoke(this, EventArgs.Empty);
+				_OnClientKickedFromServer?.Invoke(this, EventArgs.Empty);
 			}
 		}
 	}
