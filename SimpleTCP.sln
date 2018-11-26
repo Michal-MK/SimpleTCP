@@ -5,6 +5,11 @@ VisualStudioVersion = 15.0.27703.2000
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleTCP", "SimpleTCP.csproj", "{94BDA964-0894-4CF4-80A6-44A1E789F181}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimpleTCP_Tests", "SimpleTCP_Tests\SimpleTCP_Tests.csproj", "{EE85F07A-8303-4CB5-922C-C8C3A5D39086}"
+	ProjectSection(ProjectDependencies) = postProject
+		{94BDA964-0894-4CF4-80A6-44A1E789F181} = {94BDA964-0894-4CF4-80A6-44A1E789F181}
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +20,10 @@ Global
 		{94BDA964-0894-4CF4-80A6-44A1E789F181}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{94BDA964-0894-4CF4-80A6-44A1E789F181}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{94BDA964-0894-4CF4-80A6-44A1E789F181}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE85F07A-8303-4CB5-922C-C8C3A5D39086}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE85F07A-8303-4CB5-922C-C8C3A5D39086}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE85F07A-8303-4CB5-922C-C8C3A5D39086}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE85F07A-8303-4CB5-922C-C8C3A5D39086}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
