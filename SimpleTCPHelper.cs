@@ -2,6 +2,7 @@
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Igor.TCP {
@@ -128,6 +129,59 @@ namespace Igor.TCP {
 				}
 			}
 			return obj;
+		}
+
+		/// <summary>
+		/// Objects have to be in the same name-space in order to return an actual object.
+		/// </summary>
+		internal static T GetObject<T>(byte[] bytes) where T : new() {
+			Type tType = typeof(T);
+
+			if (tType == typeof(bool)) {
+				return (T)Convert.ChangeType(BitConverter.ToBoolean(bytes, 0),typeof(T));
+			}
+			else if (tType == typeof(char)) {
+				return (T)Convert.ChangeType(BitConverter.ToChar(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(double)) {
+				return (T)Convert.ChangeType(BitConverter.ToDouble(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(float)) {
+				return (T)Convert.ChangeType(BitConverter.ToSingle(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(Int32)) {
+				return (T)Convert.ChangeType(BitConverter.ToInt32(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(Int64)) {
+				return (T)Convert.ChangeType(BitConverter.ToInt64(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(Int16)) {
+				return (T)Convert.ChangeType(BitConverter.ToInt16(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(UInt32)) {
+				return (T)Convert.ChangeType(BitConverter.ToUInt32(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(UInt64)) {
+				return (T)Convert.ChangeType(BitConverter.ToUInt64(bytes, 0), typeof(T));
+			}
+			else if (tType == typeof(UInt16)) {
+				return (T)Convert.ChangeType(BitConverter.ToUInt16(bytes, 0), typeof(T));
+			}
+			else {
+				try {
+					using (MemoryStream ms = new MemoryStream()) {
+						ms.Write(bytes, 0, bytes.Length);
+						ms.Seek(0, SeekOrigin.Begin);
+						bf.Binder = new MyBinder();
+						return (T)bf.Deserialize(ms);
+					}
+				}
+				catch (Exception) {
+					throw new SerializationException("Unable to deserialize stream into type '" + tType.ToString() +
+						"' possibly the stream was not serialized using the internal  serializer," +
+						" in that case you have to write your own deserializer as well.");
+				}
+			}
 		}
 
 		/// <summary>

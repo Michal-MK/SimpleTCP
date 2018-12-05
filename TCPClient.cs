@@ -1,13 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Reflection;
-using System.Threading;
 using System.Threading.Tasks;
-#if UNITY_STANDALONE || UNITY_ANDROID
-using UnityEngine;
-#endif
-
 
 namespace Igor.TCP {
 	/// <summary>
