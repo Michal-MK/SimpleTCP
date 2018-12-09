@@ -17,6 +17,9 @@ namespace Igor.TCP {
 		/// <exception cref="WebException"></exception>
 		public static IPAddress GetActiveIPv4Address() {
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
+				socket.Connect("8.8.8.8", 80);
+				return (socket.LocalEndPoint as IPEndPoint).Address;
+				/*
 				var result = socket.BeginConnect("8.8.8.8",80, null,null);
 
 				bool success = result.AsyncWaitHandle.WaitOne(2000, true);
@@ -26,7 +29,7 @@ namespace Igor.TCP {
 				}
 				else {
 					throw new WebException("Unable to connect to Google proxy", WebExceptionStatus.ConnectFailure);
-				}
+				}*/
 			}
 		}
 

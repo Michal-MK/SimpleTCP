@@ -80,10 +80,10 @@ namespace Igor.TCP {
 		/// Start server using specified 'port' and explicitly specified 'ipAddress'
 		/// </summary>
 		/// <exception cref="ServerStartException"></exception>
-		public void Start(string ipAddress, ushort port) {
+		public async Task Start(string ipAddress, ushort port) {
 			if (IPAddress.TryParse(ipAddress, out currentAddress)) {
 				currentPort = port;
-				StartServer(currentAddress, port);
+				await StartServer(currentAddress, port);
 			}
 			else {
 				Console.WriteLine("Unable to parse IP address string '{0}'", ipAddress);
@@ -95,8 +95,8 @@ namespace Igor.TCP {
 		/// Start server using specified 'port' and explicitly specified 'ipAddress'
 		/// </summary>
 		/// <exception cref="ServerStartException"></exception>
-		public void Start(IPAddress address, ushort port) {
-			StartServer(address, port);
+		public async Task Start(IPAddress address, ushort port) {
+			await StartServer(address, port);
 		}
 
 		/// <summary>
