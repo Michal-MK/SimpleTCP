@@ -96,7 +96,7 @@ namespace SimpleTCP_Tests {
 			await server.Start(55550);
 			client.Connect();
 
-			await Task.Run(() => { Thread.Sleep(50); });
+			await Task.Run(() => { Thread.Sleep(100); });
 
 			const byte PACKET_ID = 4;
 
@@ -129,6 +129,72 @@ namespace SimpleTCP_Tests {
 		#endregion
 
 
+		#region Sending custom types from both sides
+
+		const string SERVER_STRING_C = "Hello from server";
+		const string CLIENT_STRING_C = "Hello from client";
+
+		const Int64 SERVER_LONG_C = 1000;
+		const Int64 CLIENT_LONG_C = 10000;
+
+		int eventsPassed_C = 0;
+
+		
+		public async Task SendCustom() {
+
+			TCPServer server = new TCPServer(new ServerConfiguration());
+
+			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			await server.Start(55550);
+			client.Connect();
+
+			Thread.Sleep(50);
+
+			server.GetConnection(1).OnInt64Received += ServerClientTests_OnInt64Received;
+
+			client.getConnection.OnStringReceived += GetConnection_OnStringReceived;
+			client.getConnection.OnInt64Received += GetConnection_OnInt64Received;
+
+			server.GetConnection(1).SendData(SERVER_STRING);
+			server.GetConnection(1).SendData(SERVER_LONG);
+
+			client.getConnection.SendData(CLIENT_STRING);
+			client.getConnection.SendData(CLIENT_LONG);
+
+			await Task.Run(() => { Thread.Sleep(100); });
+
+			Assert.IsTrue(eventsPassed_C == 4);
+
+			await server.Stop();
+		}
+
+		private void GetConnection_OnInt64Received_C(object sender, PacketReceivedEventArgs<long> e) {
+			if (e.data == SERVER_LONG && e.clientID == TCPServer.ServerPacketOrigin) {
+				eventsPassed++;
+			}
+		}
+
+		private void GetConnection_OnStringReceived_C(object sender, PacketReceivedEventArgs<string> e) {
+			if (e.data == SERVER_STRING && e.clientID == TCPServer.ServerPacketOrigin) {
+				eventsPassed++;
+			}
+		}
+
+		private void ServerClientTests_OnInt64Received_C(object sender, PacketReceivedEventArgs<long> e) {
+			if (e.data == CLIENT_LONG && e.clientID == 1) {
+				eventsPassed++;
+			}
+		}
+
+		private void ServerClientTests_OnStringReceived_C(object sender, PacketReceivedEventArgs<string> e) {
+			if (e.data == CLIENT_STRING && e.clientID == 1) {
+				eventsPassed++;
+			}
+		}
+
+		#endregion
+
+		
 		#region Sending primitive types from both sides
 
 		const string SERVER_STRING = "Hello from server";
@@ -234,6 +300,7 @@ namespace SimpleTCP_Tests {
 
 		#endregion
 
+
 		#region Property synchronization
 
 		public string[] serverProperty { get; set; } = new string[] { "Hello", "Server" };
@@ -254,7 +321,7 @@ namespace SimpleTCP_Tests {
 
 			const byte PROP_ID = 4;
 
-			server.SyncPropery(1, this, nameof(serverProperty), PROP_ID);
+			server.SyncProperty(1, this, nameof(serverProperty), PROP_ID);
 
 			Assert.ThrowsException<InvalidOperationException>(() => { client.SyncPropery(this, nameof(clientProperty), PROP_ID); });
 			Assert.ThrowsException<NotImplementedException>(() => { client.SyncPropery(this, "a", PROP_ID); });
