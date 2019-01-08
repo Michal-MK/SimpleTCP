@@ -19,12 +19,12 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Callback action to receive the selected object
 		/// </summary>
-		internal Action<object,byte> action { get; }
+		internal Action<byte ,object> action { get; }
 
 		/// <summary>
 		/// Default Constructor
 		/// </summary>
-		internal CustomPacket(byte packetID, Type dataType, Action<object,byte> action) {
+		internal CustomPacket(byte packetID, Type dataType, Action<byte ,object> action) {
 			this.packetID = packetID;
 			this.dataType = dataType;
 			this.action = action;

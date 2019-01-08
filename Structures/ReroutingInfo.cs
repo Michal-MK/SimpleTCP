@@ -9,10 +9,6 @@
 			toClient = to;
 		}
 
-		internal void SetPacketInfo(byte packetID) {
-			this.packetID = packetID;
-		}
-
 		/// <summary>
 		/// ID this packet originated from
 		/// </summary>

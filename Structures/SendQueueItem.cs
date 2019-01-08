@@ -2,7 +2,7 @@
 	/// <summary>
 	/// Structure to hold all necessary data to correctly send a packet to the other side
 	/// </summary>
-	public struct SendQueueItem {
+	internal struct SendQueueItem {
 
 		/// <summary>
 		/// The ID to send this packet to
@@ -28,7 +28,7 @@
 		/// <summary>
 		/// Default constructor
 		/// </summary>
-		public SendQueueItem(byte packetID, byte originClientID, byte[] rawData, bool reroutedByServer) {
+		internal SendQueueItem(byte packetID, byte originClientID, byte[] rawData, bool reroutedByServer = false) {
 			this.packetID = packetID;
 			this.originClientID = originClientID;
 			this.rawData = rawData;

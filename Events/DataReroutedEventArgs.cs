@@ -6,11 +6,11 @@ namespace Igor.TCP {
 	/// </summary>
 	public class DataReroutedEventArgs : EventArgs {
 
-		internal DataReroutedEventArgs(byte forwardedClient, byte originClient, byte universalID, byte[] data, bool isUserDefined) {
+		internal DataReroutedEventArgs(byte forwardedClient, byte originClient, byte packetID, byte[] data, bool isUserDefined) {
 			this.forwardedClient = forwardedClient;
 			this.originClient = originClient;
 			this.data = data;
-			this.universalID = universalID;
+			this.packetID = packetID;
 			this.isUserDefined = isUserDefined;
 		}
 
@@ -27,9 +27,9 @@ namespace Igor.TCP {
 		internal byte[] data { get; }
 
 		/// <summary>
-		/// PacketID, if 'isUserDefined' is true, this filed holds the DataID under <see cref="DataIDs.UserDefined"/>
+		/// ID of the packet
 		/// </summary>
-		public byte universalID { get; }
+		public byte packetID { get; }
 
 		/// <summary>
 		/// Is this data defined by user

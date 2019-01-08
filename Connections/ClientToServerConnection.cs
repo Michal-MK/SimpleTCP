@@ -27,9 +27,16 @@ namespace Igor.TCP {
 		/// Handle higher level data that only a Client can react to
 		/// </summary>
 		/// <param name="data"></param>
-		public override void HigherLevelDataReceived(ReceivedData data) {
-			if (data.dataID == DataIDs.ClientDisconnected) {
+		protected override void HigherLevelDataReceived(ReceivedData data) {
+			if (data.dataType == typeof(ClientDisconnectedPacket)) {
 				_OnClientKickedFromServer?.Invoke(this, EventArgs.Empty);
+			}
+			if (data.dataType == typeof(OnPropertySynchronizationEventArgs)) {
+				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
+					syncID = (byte)data.receivedObject,
+					propertyName = client.getConnection.dataIDs.syncedProperties[(byte)data.receivedObject].property.Name,
+					instance = client.getConnection.dataIDs.syncedProperties[(byte)data.receivedObject].classInstance
+				});
 			}
 		}
 	}

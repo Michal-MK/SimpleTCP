@@ -4,11 +4,11 @@ namespace Igor.TCP {
 	/// <summary>
 	/// Class handing requests from the other side
 	/// </summary>
-	public class ResponseManager {
+	public class RequestHandler {
 
 		internal TCPConnection connection;
 
-		internal ResponseManager(TCPConnection connection) {
+		internal RequestHandler(TCPConnection connection) {
 			this.connection = connection;
 		}
 
@@ -22,7 +22,7 @@ namespace Igor.TCP {
 			data[0] = request.packetID;
 			data_ready.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
 
-			connection._SendData(DataIDs.ResponseReceptionID, connection.myInfo.clientID, data);
+			connection.SendData(DataIDs.ResponseReceptionID, connection.myInfo.clientID, data);
 		}
 
 		/// <summary>

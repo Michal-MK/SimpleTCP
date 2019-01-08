@@ -12,7 +12,7 @@ namespace Igor.TCP {
 
 		internal TCPServer server;
 
-		internal ServerToClientConnection(TcpClient client,TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
+		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
 			: base(client, serverInfo, clientInfo) {
 			this.server = server;
 		}
@@ -20,7 +20,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Handle higher level data that only server can receive and react to
 		/// </summary>
-		public override void HigherLevelDataReceived(ReceivedData data) {
+		protected override void HigherLevelDataReceived(ReceivedData data) {
 			if (data.dataType == typeof(TCPClient)) {
 				DisconnectClient(data.senderID);
 			}
@@ -49,7 +49,7 @@ namespace Igor.TCP {
 		/// Enqueue data to be rerouted to the sender queue, will retain original sender ID
 		/// </summary>
 		internal void _SendDataRerouted(byte universalID, byte originID, byte[] data) {
-			EnquqeAndSend(new SendQueueItem(universalID, originID, data, true));
+			EnquqeAndSend(new SendQueueItem(universalID, originID, data, true)); //??
 		}
 	}
 }

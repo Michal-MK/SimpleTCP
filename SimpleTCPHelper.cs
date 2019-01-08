@@ -15,21 +15,21 @@ namespace Igor.TCP {
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
 		/// <exception cref="WebException"></exception>
-		public static IPAddress GetActiveIPv4Address() {
+		public static IPAddress GetActiveIPv4Address(int timeout = 2000) {
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
-				socket.Connect("8.8.8.8", 80);
-				return (socket.LocalEndPoint as IPEndPoint).Address;
-				/*
-				var result = socket.BeginConnect("8.8.8.8",80, null,null);
+				//socket.Connect("8.8.8.8", 80);
+				//return (socket.LocalEndPoint as IPEndPoint).Address;
 
-				bool success = result.AsyncWaitHandle.WaitOne(2000, true);
+				IAsyncResult result = socket.BeginConnect("8.8.8.8", 80, null, null);
+
+				bool success = result.AsyncWaitHandle.WaitOne(timeout, true);
 				if (success) {
 					socket.EndConnect(result);
 					return (socket.LocalEndPoint as IPEndPoint).Address;
 				}
 				else {
-					throw new WebException("Unable to connect to Google proxy", WebExceptionStatus.ConnectFailure);
-				}*/
+					throw new WebException("Unable to connect to Google proxy, you are offline (or Google is, but we know that is not true)", WebExceptionStatus.ConnectFailure);
+				}
 			}
 		}
 
@@ -37,7 +37,7 @@ namespace Igor.TCP {
 		/// Wrapper to all object to byte[] conversions
 		/// <para>WARNING! When serializing/deserializing custom structures the name-space has to match on both ends!</para> 
 		/// </summary>
-		public static byte[] GetBytesFromObject(object obj) {
+		internal static byte[] GetBytesFromObject(object obj) {
 			byte[] bytes;
 
 			if (obj is bool) {
@@ -90,6 +90,9 @@ namespace Igor.TCP {
 			if (t == typeof(bool)) {
 				obj = BitConverter.ToBoolean(bytes, 0);
 			}
+			else if (t == typeof(string)) {
+				obj = System.Text.Encoding.UTF8.GetString(bytes);
+			}
 			else if (t == typeof(char)) {
 				obj = BitConverter.ToChar(bytes, 0);
 			}
@@ -141,7 +144,7 @@ namespace Igor.TCP {
 			Type tType = typeof(T);
 
 			if (tType == typeof(bool)) {
-				return (T)Convert.ChangeType(BitConverter.ToBoolean(bytes, 0),typeof(T));
+				return (T)Convert.ChangeType(BitConverter.ToBoolean(bytes, 0), typeof(T));
 			}
 			else if (tType == typeof(char)) {
 				return (T)Convert.ChangeType(BitConverter.ToChar(bytes, 0), typeof(T));

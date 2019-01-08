@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Diagnostics;
-using Igor.TCP;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace SimpleTCP_Tests {
+namespace Igor.TCP {
 
 	[TestClass]
 	public class ClientTests {

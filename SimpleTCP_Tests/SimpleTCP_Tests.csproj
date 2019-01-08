@@ -52,7 +52,13 @@
     <Compile Include="ClientTests.cs" />
     <Compile Include="MultipleClientsPerServer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerClientTests.cs" />
+    <Compile Include="ServerClientTests_Connect.cs" />
+    <Compile Include="ServerClientTests_Disconnect.cs" />
+    <Compile Include="ServerClientTests_PropSync.cs" />
+    <Compile Include="ServerClientTests_Reconnect.cs" />
+    <Compile Include="ServerClientTests_Primitives.cs" />
+    <Compile Include="ServerClientTests_CustomStructurePacket.cs" />
+    <Compile Include="ServerClientTests_Requests.cs" />
     <Compile Include="ServerTests.cs" />
   </ItemGroup>
   <ItemGroup>

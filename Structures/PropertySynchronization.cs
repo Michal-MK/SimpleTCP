@@ -27,7 +27,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Wrapper to get the type of the class instance
 		/// </summary>
-		internal Type classInstanceType { get { return property.DeclaringType; } }
+		internal Type classInstanceType { get { return property.DeclaringType; } } 
 
 		/// <summary>
 		/// Default Constructor

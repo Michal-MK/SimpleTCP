@@ -50,20 +50,12 @@ namespace Igor.TCP {
 		/// </summary>
 		public const byte ServerStop = 255;
 
-		/// <summary>
-		/// How many bytes are used to identify a client
-		/// </summary>
-		public const byte CLIENT_IDENTIFICATION_COMPLEXITY = 1;
 
-		/// <summary>
-		/// How many bytes are used to identify a packet
-		/// </summary>
-		public const byte PACKET_ID_COMPLEXITY = 1;
+		internal const byte CLIENT_IDENTIFICATION_COMPLEXITY = 1;
 
-		/// <summary>
-		/// How many bytes are used to describe packets size, maximum is now 2^8 bytes
-		/// </summary>
-		public const byte PACKET_TOTAL_SIZE_COMPLEXITY = 8;
+		internal const byte PACKET_ID_COMPLEXITY = 1;
+
+		internal const byte PACKET_TOTAL_SIZE_COMPLEXITY = 8;
 
 		#endregion
 
@@ -77,28 +69,30 @@ namespace Igor.TCP {
 
 		internal static readonly Dictionary<byte, List<ReroutingInfo>> rerouter = new Dictionary<byte, List<ReroutingInfo>>();
 
+		internal static readonly Dictionary<byte, Delegate> providedValues = new Dictionary<byte, Delegate>();
+
 		private readonly BinaryFormatter bf = new BinaryFormatter();
-		private ResponseManager responseManager;
+		private RequestHandler responseManager;
 
 		internal event EventHandler<DataReroutedEventArgs> OnRerouteRequest;
 
+		private readonly TCPConnection _connection;
+
 		internal DataIDs(TCPConnection connection) {
-			responseManager = new ResponseManager(connection);
+			responseManager = new RequestHandler(connection);
+			_connection = connection;
 		}
 
-		internal Type IndetifyID(byte ID, byte fromClient, byte[] data, out object dataObj) {
-			if (Reroute(ID, fromClient, data)) {
-				dataObj = null;
+		internal Type IndetifyID(byte packetID, byte fromClient, byte[] data) {
+			if (Reroute(packetID, fromClient, data)) {
 				return null;
 			}
 
-			switch (ID) {
+			switch (packetID) {
 				case StringID: {
-					dataObj = System.Text.Encoding.UTF8.GetString(data);
 					return typeof(string);
 				}
 				case Int64ID: {
-					dataObj = BitConverter.ToInt64(data, 0);
 					return typeof(Int64);
 				}
 				case RequestReceptionID: {
@@ -116,13 +110,11 @@ namespace Igor.TCP {
 					else {
 						responseManager.HandleRequest(request, obj);
 					}
-					dataObj = null;
 					return typeof(TCPRequest);
 				}
 				case ResponseReceptionID: {
 					TCPResponse response = new TCPResponse(data[0], new byte[data.Length - 1], responseManager.GetResponseType(data[0]));
 					Array.Copy(data, 1, response.rawData, 0, data.Length - 1);
-					dataObj = response;
 					return typeof(TCPResponse);
 				}
 				case PropertySyncID: {
@@ -130,25 +122,59 @@ namespace Igor.TCP {
 					Array.Copy(data, 1, realData, 0, realData.Length);
 					syncedProperties[data[0]].property.SetValue(syncedProperties[data[0]].classInstance,
 						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
-					dataObj = null;
-					return typeof(TCPRequest);
+					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case ClientDisconnected: {
-					dataObj = data;
-					return typeof(TCPClient);
+					return typeof(ClientDisconnectedPacket);
 				}
 				default: {
-					if (customIDs.ContainsKey(ID)) {
-						Type t = customIDs[ID].dataType;
-						dataObj = SimpleTCPHelper.GetObject(t, data);
-						customIDs[ID].action.Invoke(dataObj, fromClient);
-						return null;
+					if (customIDs.ContainsKey(packetID)) {
+						return typeof(CustomPacket);
 					}
-					throw new NotSupportedException(string.Format("This identifier is not supported '{0}'", ID));
+					throw new UndefinedPacketException("Received unknown packet!", packetID, null);
 				}
 			}
 		}
 
+		/// <summary>
+		/// Helper to find wheter the ID is already taken by something
+		/// </summary>
+		internal bool IsIDReserved(byte packetID, out Type dataType, out string message) {
+
+			//Primitives provided by the server
+			if (packetID == StringID) {
+				dataType = typeof(string);
+				message = "This ID is taken by a primitive String sending packet, use OnStringReceived event";
+				return true;
+			}
+			if (packetID == Int64ID) {
+				dataType = typeof(Int64);
+				message = "This ID is taken by a primitive Int64 sending packet, use OnInt64Received event";
+				return true;
+			}
+
+			//Internal stuff
+			if (packetID > 240) {
+				dataType = typeof(object);
+				message = "IDs higher than 250 are reserved for internal use!";
+				return true;
+			}
+
+			//Dictionary
+			if (customIDs.ContainsKey(packetID)) {
+				dataType = customIDs[packetID].dataType;
+				message = "This ID is taken by a packet for general data transmit";
+				return true;
+			}
+			if (providedValues.ContainsKey(packetID)) {
+				dataType = typeof(object);
+				message = "This ID is taken by a packet for general data transmit";
+				return true;
+			}
+			dataType = null;
+			message = "This ID is available!";
+			return false;
+		}
 
 		private bool Reroute(byte ID, byte fromClient, byte[] data) {
 			if (rerouter.ContainsKey(ID)) {
@@ -167,17 +193,11 @@ namespace Igor.TCP {
 			return false;
 		}
 
-		/// <summary>
-		/// Register custom packet with 'ID' that will carry data of 'TData' type, delivered via 'callback' event
-		/// </summary>
-		public void DefineCustomDataTypeForID<TData>(byte ID, Action<TData, byte> callback) {
-			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<object, byte>((o,b) => { callback((TData)o,b); })));
+		internal void DefineCustomDataTypeForID<TData>(byte ID, Action<byte, TData> callback) {
+			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<byte, object>((b, o) => { callback(b, (TData)o); })));
 		}
 
-		/// <summary>
-		/// Remove previously registered custom packet by 'ID'
-		/// </summary>
-		public void RemoveCustomDefinitionForID(byte ID) {
+		internal void RemoveCustomDefinitionForID(byte ID) {
 			customIDs.Remove(ID);
 		}
 

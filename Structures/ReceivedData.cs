@@ -13,7 +13,7 @@ namespace Igor.TCP {
 		internal Type dataType { get; }
 
 		/// <summary>
-		/// ID this packet originated from
+		/// ID of the endpoint this packet originated from
 		/// </summary>
 		internal byte senderID { get; }
 

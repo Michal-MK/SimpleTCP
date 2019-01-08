@@ -3,15 +3,13 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	internal class RequestManager : IDisposable {
+	internal class RequestCreator : IDisposable {
 		internal TCPConnection connection;
 		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
 
-		internal RequestManager(TCPConnection connection) {
+		internal RequestCreator(TCPConnection connection) {
 			this.connection = connection;
 		}
-
-		#region Request raising + reception of responses
 
 		private TCPResponse currentResponseObject;
 
@@ -19,7 +17,7 @@ namespace Igor.TCP {
 			evnt.Reset();
 			if (!connection.dataIDs.requestTypeMap.ContainsKey(ID)) {
 				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, " +
-					"Call 'DefineRequestEntry<TData>(byte clientID, byte ID)' to set it + its response data type", ID));
+					"Is it not defined yet?", ID));
 			}
 			return await Task.Run(delegate () {
 				byte request = ID;
@@ -35,22 +33,17 @@ namespace Igor.TCP {
 			evnt.Set();
 		}
 
-		#endregion
-
-
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls
 
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
-				//if (disposing) {
-				//}
 				evnt.Dispose();
 				disposedValue = true;
 			}
 		}
 
-		 ~RequestManager() {
+		 ~RequestCreator() {
 			Dispose(false);
 		}
 

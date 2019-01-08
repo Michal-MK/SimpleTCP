@@ -1,10 +1,8 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Igor.TCP;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace SimpleTCP_Tests {
+namespace Igor.TCP {
 
 	[TestClass]
 	public class ServerTests {

@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reflection;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -25,11 +24,10 @@ namespace Igor.TCP {
 
 		private ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
 
-
 		/// <summary>
 		/// Client ID used by packets that come from the server
 		/// </summary>
-		public const byte ServerPacketOrigin = 0;
+		public const byte ServerPacketOriginID = 0;
 
 		/// <summary>
 		/// Configuration of this server
@@ -39,7 +37,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Called when client connects to this server
 		/// </summary>
-		public event EventHandler<ClientConnectedEventArgs> OnConnectionEstablished;
+		public event EventHandler<ClientConnectedEventArgs> OnClientConnected;
 
 		/// <summary>
 		/// Called when client disconnects from this server
@@ -126,7 +124,7 @@ namespace Igor.TCP {
 				listenForClientConnections = false;
 				clientConnectionListener.Stop();
 				foreach (ServerToClientConnection connection in connectedClients.Values.ToArray()) {
-					connection.DisconnectClient(connection.connectedClientInfo.clientID);
+					connection.DisconnectClient(connection.infoAboutOtherSide.clientID);
 				}
 			});
 		}
@@ -155,7 +153,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.connectedClientInfo.clientAddress == address) {
+				if (item.Value.infoAboutOtherSide.clientAddress == address) {
 					return item.Value;
 				}
 			}
@@ -172,7 +170,7 @@ namespace Igor.TCP {
 				int i = 0;
 				while (enumer.MoveNext()) {
 					KeyValuePair<byte, ServerToClientConnection> kv = enumer.Current;
-					connections[i] = kv.Value.connectedClientInfo;
+					connections[i] = kv.Value.infoAboutOtherSide;
 					i++;
 				}
 				return connections;
@@ -181,6 +179,7 @@ namespace Igor.TCP {
 
 		#endregion
 
+		#region Listen for client connection
 
 		/// <summary>
 		/// Set listening for incoming data from connected client 'clientID'
@@ -225,15 +224,20 @@ namespace Igor.TCP {
 
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
 				TCPClientInfo connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
-				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address());
-				serverInfo.clientID = 0;
+				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address()) {
+					clientID = 0
+				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
 				connectedClients.Add(ID, conn);
-				OnConnectionEstablished?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
+				OnClientConnected?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
 			}
 		}
+
+		#endregion
+
+		#region Private Events
 
 		private void ClientDisconnected(object sender, byte e) {
 			OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e));
@@ -242,20 +246,24 @@ namespace Igor.TCP {
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
-				connectedClients[e.forwardedClient]._SendDataRerouted(e.universalID, e.originClient, e.data);
+				connectedClients[e.forwardedClient]._SendDataRerouted(e.packetID, e.originClient, e.data);
 				OnDataRerouted?.Invoke(this, e);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + e.forwardedClient + " is not connected to the server!");
 		}
 
+		#endregion
+
+		#region Property Synchronization
+
 		/// <summary>
 		/// Define 'propID' for synchronization of public property for client 'clientID' named 'propetyName' from instance of a class 'instance', publish changes by calling UpdateProp()
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void SyncPropery(byte clientID, object instance, string propertyName, byte propID) {
+		public void SyncProperty(byte clientID, object instance, string propertyName, byte propertySyncPacketID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.syncedProperties.Add(propID, new PropertySynchronization(propID, instance, propertyName));
+				connectedClients[clientID].dataIDs.syncedProperties.Add(propertySyncPacketID, new PropertySynchronization(propertySyncPacketID, instance, propertyName));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -267,59 +275,70 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void UpdateProp(byte clientID, byte ID, object value) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ID, SimpleTCPHelper.GetBytesFromObject(value));
+				byte[] rawData = SimpleTCPHelper.GetBytesFromObject(value);
+				byte[] merged = new byte[rawData.Length + 1];
+				merged[0] = ID;
+				rawData.CopyTo(merged, 1);
+				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ServerPacketOriginID, rawData);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
 		}
 
+		#endregion
+
 		#region Communication Definitions
+
+		/// <summary>
+		/// Provide a value to all connected clients
+		/// </summary>
+		public void ProvideValue<T>(byte packetID, Func<T> function) {
+			foreach (TCPClientInfo info in getConnectedClients) {
+				if (connectedClients[info.clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+					throw new PacketIDTakenException(packetID, dataType, message);
+				}
+			}
+			DataIDs.providedValues.Add(packetID, function); //TODO
+		}
+
+		/// <summary>
+		/// Provide a value to a selected client
+		/// </summary>
+		public void ProvideValue<T>(byte clientID, byte packetID, Func<T> function) {
+			if (connectedClients[clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+				throw new PacketIDTakenException(packetID, dataType, message);
+			}
+			GetConnection(clientID).dataIDs.responseFunctionMap.Add(packetID, function);
+		}
+
+		/// <summary>
+		/// Request a value from a client
+		/// </summary>
+		public async Task<T> GetValue<T>(byte clientID, byte packetID) {
+			TCPResponse resp = await GetConnection(clientID).requestCreator.Request(packetID);
+			return (T)resp.getObject;
+		}
 
 		/// <summary>
 		/// Shorthand for Request and response id definition, when both sides are senders 
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
+		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
 		public void DefineTwoWayComunication<TData>(byte clientID, byte packetID, Func<TData> function) {
-			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.requestTypeMap.Add(packetID, typeof(TData));
-				connectedClients[clientID].dataIDs.responseFunctionMap.Add(packetID, function);
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
+			DefineRequestEntry<TData>(clientID, packetID);
+			DefineResponseEntry(clientID, packetID, function);
 		}
-
-		/// <summary>
-		/// Cancel two way communication for client 'clientID' with id 'ID'
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		public void CancelTwoWayComunication(byte clientID, byte packetID) {
-			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.requestTypeMap.Remove(packetID);
-				connectedClients[clientID].dataIDs.responseFunctionMap.Remove(packetID);
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
 		/// <summary>
 		/// Define custom request by specifying its 'TData' type with selected 'ID'
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void DefineRequestEntry<TData>(byte clientID, byte ID) {
+		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
+		public void DefineRequestEntry<TData>(byte clientID, byte packetID) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.requestTypeMap.Add(ID, typeof(TData));
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
-		/// <summary>
-		/// Cancel custom request of 'TData' under 'ID'
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		public void CancelRequestID(byte clientID, byte ID) {
-			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.requestTypeMap.Remove(ID);
+				if (connectedClients[clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+					throw new PacketIDTakenException(packetID, dataType, message);
+				}
+				connectedClients[clientID].dataIDs.requestTypeMap.Add(packetID, typeof(TData));
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -329,21 +348,13 @@ namespace Igor.TCP {
 		/// Define response 'function' to be called when request packet with 'ID' is received
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
-		public void DefineResponseEntry<TData>(byte clientID, byte ID, Func<TData> function) {
+		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
+		public void DefineResponseEntry<TData>(byte clientID, byte packetID, Func<TData> function) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.responseFunctionMap.Add(ID, function);
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
-		/// <summary>
-		/// Cancel response to request with 'ID'
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		public void CancelResponseID(byte clientID, byte ID) {
-			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].dataIDs.responseFunctionMap.Remove(ID);
+				if (connectedClients[clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+					throw new PacketIDTakenException(packetID, dataType, message);
+				}
+				connectedClients[clientID].dataIDs.responseFunctionMap.Add(packetID, function);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -353,35 +364,42 @@ namespace Igor.TCP {
 		/// Define rerouting of all packets from 'fromClient' coming to this server to under 'packetID' to be sent to 'toClient'
 		/// </summary>
 		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID) {
-			ReroutingInfo info = new ReroutingInfo(fromClient, toClient);
-			info.SetPacketInfo(packetID);
+			ReroutingInfo info = new ReroutingInfo(fromClient, toClient) { packetID = packetID };
 			DataIDs.AddToReroute(packetID, info);
+		}
+
+		/// <summary>
+		/// Register custom packet with ID that will carry a TData type, delivered via the callback
+		/// </summary>
+		public void DefineCustomPacket<TData>(byte clientID, byte packetID, Action<byte, TData> callback) {
+			if (!typeof(TData).IsSerializable) {
+				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
+			}
+			GetConnection(clientID).dataIDs.DefineCustomDataTypeForID(packetID, callback);
+		}
+
+		/// <summary>
+		/// Remove previously registered custom packet
+		/// </summary>
+		[Obsolete("This function is being removed due to not being used. No plans to reimplement the functionality.")]
+		public void RemoveCustomPacket(byte clientID, byte packetID) {
+			GetConnection(clientID).dataIDs.customIDs.Remove(packetID);
 		}
 
 		#endregion
 
 		/// <summary>
-		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		public async Task<TCPResponse> RaiseRequestAsync(byte clientID, byte ID) {
-			if (connectedClients.ContainsKey(clientID)) {
-				return await connectedClients[clientID].requestHandler.Request(ID);
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
-		/// <summary>
-		/// Send 'data' to all connected clients, sent under <see cref="DataIDs.UserDefined"/> packet.
+		/// Send 'data' to all connected clients.
 		/// </summary>
 		/// <exception cref="UndefinedPacketException"></exception>
-		public void SendToAll<TData>(byte dataID, TData data) {
+		/// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
+		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
-				if (info.dataIDs.customIDs.ContainsKey(dataID)) {
-					info._SendData(dataID, 0, SimpleTCPHelper.GetBytesFromObject(data));
+				if (info.dataIDs.customIDs.ContainsKey(packetID)) {
+					info.SendData(packetID, 0, SimpleTCPHelper.GetBytesFromObject(data));
 				}
 				else {
-					throw new UndefinedPacketException("Packet is not defined!", dataID, typeof(TData));
+					throw new UndefinedPacketException("Packet is not defined!", packetID, typeof(TData));
 				}
 			}
 		}

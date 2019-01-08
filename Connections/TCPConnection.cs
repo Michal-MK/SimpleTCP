@@ -1,9 +1,9 @@
 ﻿using System;
-using System.IO;
 using System.Net.Sockets;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Threading;
+using System.Diagnostics;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -11,12 +11,7 @@ namespace Igor.TCP {
 	/// </summary>
 	public class TCPConnection : IDisposable {
 
-		private BinaryFormatter bf = new BinaryFormatter();
-		/// <summary>
-		/// Stream on which all transmission happens
-		/// </summary>
-		internal NetworkStream stream;
-
+		#region Public Properties and fields
 		/// <summary>
 		/// Is client listening for incoming data
 		/// </summary>
@@ -33,59 +28,63 @@ namespace Igor.TCP {
 		public bool debugPrints { get; set; }
 
 		/// <summary>
-		/// Called when successfully received data from <see cref="DataIDs.StringID"></see> marked packet
+		/// Called when successfully received data by <see cref="DataIDs.StringID"></see> marked packet
 		/// </summary>
 		public event EventHandler<PacketReceivedEventArgs<string>> OnStringReceived;
 
 		/// <summary>
-		/// Called when successfully received data from <see cref="DataIDs.Int64ID"></see> marked packet
+		/// Called when successfully received data by <see cref="DataIDs.Int64ID"></see> marked packet
 		/// </summary>
 		public event EventHandler<PacketReceivedEventArgs<Int64>> OnInt64Received;
-
-		internal event EventHandler<TCPResponse> _OnResponse;
-
-		/// <summary>
-		/// Handle Requests to the server
-		/// </summary>
-		internal RequestManager requestHandler { get; }
 
 		/// <summary>
 		/// Access to data types for custom packets
 		/// </summary>
-		public ResponseManager responseHandler { get; }
-
-
-		internal Thread senderThread;
-		internal Thread receiverThread;
+		public RequestHandler responseGenerator { get; }
 
 		/// <summary>
 		/// Define simple data packets and get internally/externally defined packet IDs
 		/// </summary>
 		public DataIDs dataIDs { get; }
 
-		/// <summary>
-		/// Queue to synchronize packet sending
-		/// </summary>
-		protected Queue<SendQueueItem> queuedData = new Queue<SendQueueItem>();
+		#endregion
+
+		#region Internal and private properties/fields
+
+		internal NetworkStream mainNetworkStream;
+
+		private BinaryFormatter bf = new BinaryFormatter();
+
+		internal event EventHandler<TCPResponse> _OnResponse;
+
+		internal Thread senderThread;
+		internal Thread receiverThread;
 
 		internal TCPClientInfo myInfo;
-		internal TCPClientInfo connectedClientInfo;
+		internal TCPClientInfo infoAboutOtherSide;
 
-		internal TCPConnection(TcpClient baseClient,TCPClientInfo me, TCPClientInfo connectecClient) {
-			connectedClientInfo = connectecClient;
-			myInfo = me;
-			stream = baseClient.GetStream();
+		internal RequestCreator requestCreator;
+		internal Queue<SendQueueItem> queuedData = new Queue<SendQueueItem>();
+		#endregion
+
+		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide) {
+			this.infoAboutOtherSide = infoAboutOtherSide;
+			this.myInfo = myInfo;
+
+			mainNetworkStream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
 			bf.Binder = new MyBinder();
 
-			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = string.Format("{0} ({1}) \"{2}\" Sender", connectecClient.clientAddress, connectecClient.clientID, connectecClient.computerName) };
+			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = string.Format("{0} ({1}) \"{2}\" Sender", infoAboutOtherSide.clientAddress, infoAboutOtherSide.clientID, infoAboutOtherSide.computerName) };
 			senderThread.Start();
-			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = string.Format("{0} ({1}) \"{2}\" Receiver", connectecClient.clientAddress, connectecClient.clientID, connectecClient.computerName) };
+			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = string.Format("{0} ({1}) \"{2}\" Receiver", infoAboutOtherSide.clientAddress, infoAboutOtherSide.clientID, infoAboutOtherSide.computerName) };
 			receiverThread.Start();
 
-			requestHandler = new RequestManager(this);
-			responseHandler = new ResponseManager(this);
+			requestCreator = new RequestCreator(this);
+			responseGenerator = new RequestHandler(this);
 		}
+
+		#region Send Primitives (string and long)
 
 		/// <summary>
 		/// Send UTF-8 encoded string to connected device
@@ -95,7 +94,7 @@ namespace Igor.TCP {
 			if (debugPrints) {
 				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
 			}
-			_SendData(DataIDs.StringID, myInfo.clientID, bytes);
+			SendData(DataIDs.StringID, myInfo.clientID, bytes);
 		}
 
 		/// <summary>
@@ -106,31 +105,23 @@ namespace Igor.TCP {
 			if (debugPrints) {
 				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
 			}
-			_SendData(DataIDs.Int64ID, myInfo.clientID, bytes);
+			SendData(DataIDs.Int64ID, myInfo.clientID, bytes);
 		}
+
+		#endregion
 
 		/// <summary>
 		/// Send a singe byte to the connected device, used for requests
 		/// </summary>
-		public void SendData(byte packetID, byte requestID) {
-			_SendData(packetID, myInfo.clientID, new byte[1] { requestID });
-		}
-
-		/// <summary>
-		///  Sends packet with id 'packetID' and additional byte 'subPacketID' as a first element of inner array of 'subPacketID' and 'data'
-		/// </summary>
-		public void SendData(byte packetID, byte subPacketID, byte[] data) {
-			byte[] merged = new byte[data.Length + 1];
-			merged[0] = subPacketID;
-			data.CopyTo(merged, 1);
-			_SendData(packetID, myInfo.clientID, merged);
+		internal void SendData(byte packetID, byte requestID) {
+			SendData(packetID, myInfo.clientID, new byte[1] { requestID });
 		}
 
 		/// <summary>
 		/// Main Send function, send byte[] of 'data' with packet ID 'packetID'
 		/// </summary>
-		internal void _SendData(byte packetID, byte clientID, byte[] data) {
-			queuedData.Enqueue(new SendQueueItem(packetID, clientID, data, false));
+		internal void SendData(byte packetID, byte senderID, byte[] data) {
+			queuedData.Enqueue(new SendQueueItem(packetID, senderID, data));
 			evnt.Set();
 		}
 
@@ -142,19 +133,33 @@ namespace Igor.TCP {
 			if (!dataIDs.customIDs.ContainsKey(packetID)) {
 				throw new NotImplementedException("Trying to send data with " + packetID + ", but this data was not defined!");
 			}
-			_SendData(packetID, myInfo.clientID, data);
+			SendData(packetID, myInfo.clientID, data);
+		}
+
+		/// <summary>
+		/// Send custom data type using internal serialization/deserialization mechanisms
+		/// </summary>
+		public void SendData<TData>(byte packetID, TData data) {
+			if (!dataIDs.customIDs.ContainsKey(packetID)) {
+				throw new NotImplementedException($"Trying to send data with {packetID}, but this data was not defined!");
+			}
+			if (!typeof(TData).IsSerializable) {
+				throw new InvalidOperationException($"Trying to send data that is not marked as [Serializable]");
+			}
+			SendData(packetID, myInfo.clientID, SimpleTCPHelper.GetBytesFromObject(data));
 		}
 
 		/// <summary>
 		/// Send data immediately on current thread, generally unsafe and should be avoided if possible
 		/// </summary>
 		internal void SendDataImmediate(byte packetID, byte[] data) {
-			SendData(new SendQueueItem(packetID, myInfo.clientID, data, this as ServerToClientConnection != null));
+			SendData(new SendQueueItem(packetID, myInfo.clientID, data)); //??
 		}
 
 		#region Queue sending
 
-		protected ManualResetEventSlim evnt;
+		private ManualResetEventSlim evnt;
+
 		internal void SendDataFromQueue() {
 			evnt = new ManualResetEventSlim();
 			while (sendingData) {
@@ -180,7 +185,7 @@ namespace Igor.TCP {
 			merged[packetSize.Length] = item.packetID; //Append packetID
 			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = item.originClientID; //Append senderID
 			item.rawData.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY); //Append the data
-			stream.Write(merged, 0, merged.Length);
+			mainNetworkStream.Write(merged, 0, merged.Length);
 		}
 
 		#endregion
@@ -190,19 +195,26 @@ namespace Igor.TCP {
 		internal void DataReception() {
 			while (listeningForData) {
 				ReceivedData data = ReceiveData();
-				if (data.dataType == typeof(string) && data.dataID == 0) {
+
+				#region Primitives
+
+				if (data.dataID == 0) {
 					if (OnStringReceived == null) {
 						throw new NullReferenceException("Received a string packet, but the OnStringReceived event is not consumed!");
 					}
 					OnStringReceived(this, new PacketReceivedEventArgs<string>((string)data.receivedObject, data.senderID));
 				}
-				else if (data.dataType == typeof(Int64) && data.dataID == 1) {
+				else if (data.dataID == 1) {
 					if (OnInt64Received == null) {
 						throw new NullReferenceException("Received an Int64(long) packet, but the OnInt64Received event is not consumed!");
 					}
 					OnInt64Received(this, new PacketReceivedEventArgs<Int64>((Int64)data.receivedObject, data.senderID));
 				}
-				else if (data.dataType == typeof(TCPResponse)) {
+
+				#endregion
+
+				//TODO change for IDs
+				if (data.dataType == typeof(TCPResponse)) {
 					_OnResponse(this, (TCPResponse)data.receivedObject);
 				}
 				else if (data.dataType == typeof(TCPRequest)) {
@@ -218,10 +230,11 @@ namespace Igor.TCP {
 		/// Override in specific connection to handle higher level data
 		/// </summary>
 		/// <param name="data">The data received</param>
-		public virtual void HigherLevelDataReceived(ReceivedData data) { }
-
+		protected virtual void HigherLevelDataReceived(ReceivedData data) { }
 
 		private ReceivedData ReceiveData() {
+			#region Working with the stream
+
 			if (debugPrints) {
 				Console.WriteLine("Waiting for next packet...");
 			}
@@ -232,16 +245,16 @@ namespace Igor.TCP {
 			Int64 totalReceived = 0;
 
 			while (totalReceived < packetSize.Length) {
-				totalReceived += stream.Read(packetSize, 0, packetSize.Length);
+				totalReceived += mainNetworkStream.Read(packetSize, 0, packetSize.Length);
 			}
 			totalReceived = 0;
 			Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
 			while (totalReceived < DataIDs.PACKET_ID_COMPLEXITY) {
-				totalReceived += stream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
+				totalReceived += mainNetworkStream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
 			}
 			totalReceived = 0;
 			while (totalReceived < DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY) {
-				totalReceived += stream.Read(fromClient, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				totalReceived += mainNetworkStream.Read(fromClient, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 			}
 			if (debugPrints) {
 				Console.WriteLine("Waiting for Data 0/" + toReceive + " bytes");
@@ -249,13 +262,43 @@ namespace Igor.TCP {
 			byte[] data = new byte[toReceive];
 			totalReceived = 0;
 			while (totalReceived < toReceive) {
-				totalReceived += stream.Read(data, (int)totalReceived, (int)(toReceive - totalReceived));
+				totalReceived += mainNetworkStream.Read(data, (int)totalReceived, (int)(toReceive - totalReceived));
 				if (debugPrints) {
 					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
 				}
 			}
-			return new ReceivedData(dataIDs.IndetifyID(packetID[0], fromClient[0], data, out object dataObj), fromClient[0], packetID[0], dataObj);
+
+			#endregion
+
+			Type dataType = dataIDs.IndetifyID(GetPacketID(packetID), GetSenderID(fromClient), data);
+			object dataObject = GetObjectFromData(dataType, data);
+			return new ReceivedData(dataType, GetSenderID(fromClient), GetPacketID(packetID), dataObject);
 		}
+
+		#region Helpers for getting senderID and packetID from byte[]
+
+		private byte GetSenderID(byte[] fromClient) {
+			if (DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY != 1) {
+				Debugger.Break();
+				throw new Exception();
+			}
+			return fromClient[0];
+		}
+
+		private byte GetPacketID(byte[] packetID) {
+			if (DataIDs.PACKET_ID_COMPLEXITY != 1) {
+				Debugger.Break();
+				throw new Exception();
+			}
+			return packetID[0];
+		}
+
+		private object GetObjectFromData(Type type, byte[] data) {
+			return SimpleTCPHelper.GetObject(type, data);
+		}
+
+		#endregion
+
 		#endregion
 
 		#region IDisposable Support
@@ -267,8 +310,8 @@ namespace Igor.TCP {
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
 				evnt.Dispose();
-				requestHandler.Dispose();
-				stream.Dispose();
+				requestCreator.Dispose();
+				mainNetworkStream.Dispose();
 				disposedValue = true;
 			}
 		}

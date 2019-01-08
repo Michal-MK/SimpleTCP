@@ -27,6 +27,11 @@ namespace Igor.TCP {
 		public bool debugPrints { get; set; } = false;
 
 		/// <summary>
+		/// Event called whenever a synchronization packet is received
+		/// </summary>
+		public event EventHandler<OnPropertySynchronizationEventArgs> OnPropertySynchronized;
+
+		/// <summary>
 		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
 		/// </summary>
 		/// <exception cref="WebException"></exception>
@@ -74,8 +79,9 @@ namespace Igor.TCP {
 
 			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
 
-			TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address);
-			serverInfo.clientID = 0;
+			TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address) {
+				clientID = 0
+			};
 			getConnection = new ClientToServerConnection(clientBase, clientInfo, serverInfo, this);
 			if (debugPrints) {
 				Console.WriteLine("Connection Established");
@@ -105,8 +111,8 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
-		public void SyncPropery(object instance, string propertyName, byte propID) {
-			getConnection.dataIDs.syncedProperties.Add(propID, new PropertySynchronization(propID,instance,propertyName));
+		public void SyncProperty(object instance, string propertyName, byte propertyPacketID) {
+			getConnection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));
 		}
 
 		#region Communication Definitions
@@ -115,44 +121,67 @@ namespace Igor.TCP {
 		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transmission like.
 		/// </summary>
 		public void DefineTwoWayComunication<TData>(byte packetID, Func<TData> function) {
-			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(TData));
-			getConnection.dataIDs.responseFunctionMap.Add(packetID, function);
+			DefineRequestEntry<TData>(packetID);
+			DefineResponseEntry(packetID, function);
 		}
 
 		/// <summary>
 		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transmission like.
 		/// </summary>
 		public void CancelTwoWayComunication(byte packetID) {
-			getConnection.dataIDs.requestTypeMap.Remove(packetID);
-			getConnection.dataIDs.responseFunctionMap.Remove(packetID);
+			CancelRequestID(packetID);
+			CancelResponseID(packetID);
 		}
 
 		/// <summary>
 		/// Define custom request by specifying its 'TData' type with selected 'ID'
 		/// </summary>
-		public void DefineRequestEntry<TData>(byte ID) {
-			getConnection.dataIDs.requestTypeMap.Add(ID, typeof(TData));
+		public void DefineRequestEntry<TData>(byte packetID) {
+			if (getConnection.dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+				throw new PacketIDTakenException(packetID, dataType, message);
+			}
+			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(TData));
 		}
 
 		/// <summary>
 		/// Cancel custom request of 'TData' under 'ID'
 		/// </summary>
-		public void CancelRequestID(byte ID) {
-			getConnection.dataIDs.requestTypeMap.Remove(ID);
+		public void CancelRequestID(byte packetID) {
+			getConnection.dataIDs.requestTypeMap.Remove(packetID);
 		}
 
 		/// <summary>
 		/// Define response 'function' to be called when request packet with 'ID' is received
 		/// </summary>
-		public void DefineResponseEntry<TData>(byte ID, Func<TData> function) {
-			getConnection.dataIDs.responseFunctionMap.Add(ID, function);
+		public void DefineResponseEntry<TData>(byte packetID, Func<TData> function) {
+			if (getConnection.dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+				throw new PacketIDTakenException(packetID, dataType, message);
+			}
+			getConnection.dataIDs.responseFunctionMap.Add(packetID, function);
 		}
 
 		/// <summary>
 		/// Cancel response to request with 'ID'
 		/// </summary>
-		public void CancelResponseID(byte ID) {
-			getConnection.dataIDs.responseFunctionMap.Remove(ID);
+		public void CancelResponseID(byte packetID) {
+			getConnection.dataIDs.responseFunctionMap.Remove(packetID);
+		}
+
+		/// <summary>
+		/// Register custom packet with ID that will carry a TData type, delivered via the callback
+		/// </summary>
+		public void DefineCustomPacket<TData>(byte packetID, Action<byte, TData> callback) {
+			if (!typeof(TData).IsSerializable) {
+				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
+			}
+			getConnection.dataIDs.DefineCustomDataTypeForID<TData>(packetID, callback);
+		}
+
+		/// <summary>
+		/// Remove previously registered custom packet
+		/// </summary>
+		public void RemoveCustomPacket(byte packetID) {
+			getConnection.dataIDs.customIDs.Remove(packetID);
 		}
 
 		#endregion
@@ -160,8 +189,8 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
 		/// </summary>
-		public async Task<TCPResponse> RaiseRequestAsync(byte ID) {
-			TCPResponse data = await getConnection.requestHandler.Request(ID);
+		public async Task<TCPResponse> RaiseRequestAsync(byte packetID) {
+			TCPResponse data = await getConnection.requestCreator.Request(packetID);
 			return data;
 		}
 
@@ -177,6 +206,10 @@ namespace Igor.TCP {
 			else {
 				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything");
 			}
+		}
+
+		internal void InvokeOnPropertySync(ClientToServerConnection con, OnPropertySynchronizationEventArgs args) {
+			OnPropertySynchronized?.Invoke(con, args);
 		}
 	}
 }

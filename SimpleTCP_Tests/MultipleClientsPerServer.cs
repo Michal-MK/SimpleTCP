@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Igor.TCP;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace SimpleTCP_Tests {
+namespace Igor.TCP {
 
 	[TestClass]
 	public class MultipleClientsPerServer {
@@ -26,8 +24,7 @@ namespace SimpleTCP_Tests {
 			client1.Connect();
 			client2.Connect();
 
-			await Task.Run(() => { Thread.Sleep(50); });
-
+			await Task.Delay(100);
 			Assert.IsTrue(client1.getConnection != null);
 			Assert.IsTrue(client2.getConnection != null);
 			Assert.IsTrue(server.getConnectedClients.Length == 2);
@@ -67,22 +64,22 @@ namespace SimpleTCP_Tests {
 			client1.Connect();
 			client2.Connect();
 
-			Thread.Sleep(50);
+			await Task.Delay(100);
 
 			const byte PACKET = 4;
 
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<string[]>(PACKET, OnServerReceivedStringArray);
+			server.DefineCustomPacket<string[]>(1, PACKET, OnServerReceivedStringArray);
 			server.DefineRerouteID(1, 2, PACKET);
 
-			client1.getConnection.dataIDs.DefineCustomDataTypeForID<string[]>(PACKET, OnMyStringArrayReceived);
-			client2.getConnection.dataIDs.DefineCustomDataTypeForID<string[]>(PACKET, OnClientStringsReceived);
+			client1.DefineCustomPacket<string[]>(PACKET, OnMyStringArrayReceived);
+			client2.DefineCustomPacket<string[]>(PACKET, OnClientStringsReceived);
 
-			await Task.Run(() => { Thread.Sleep(50); });
+			await Task.Delay(100);
 
-			client1.getConnection.SendData(PACKET, SimpleTCPHelper.GetBytesFromObject(new string[] { "Hello", "World" }));
-			server.GetConnection(1).SendData(PACKET, SimpleTCPHelper.GetBytesFromObject(new string[] { "Hello", "World" }));
+			client1.getConnection.SendData(PACKET, new string[] { "Hello", "World" });
+			server.GetConnection(1).SendData(PACKET, new string[] { "Hello", "World" });
 
-			await Task.Run(() => { Thread.Sleep(50); });
+			await Task.Delay(100);
 
 			Assert.IsTrue(callbackSuccess);
 			Assert.IsTrue(rerouteCallbackSuccess);
@@ -90,17 +87,17 @@ namespace SimpleTCP_Tests {
 			await server.Stop();
 		}
 
-		private void OnServerReceivedStringArray(string[] data, byte sender) {
+		private void OnServerReceivedStringArray(byte sender, string[] data) {
 			//Only definition needed
 		}
 
-		private void OnClientStringsReceived(string[] data, byte sender) {
+		private void OnClientStringsReceived(byte sender, string[] data) {
 			if (data[0] == "Hello" && data[1] == "World" && sender == 1) {
 				rerouteCallbackSuccess = true;
 			}
 		}
 
-		private void OnMyStringArrayReceived(string[] data, byte sender) {
+		private void OnMyStringArrayReceived(byte sender, string[] data) {
 			if (data[0] == "Hello" && data[1] == "World" && sender == 0) {
 				callbackSuccess = true;
 			}
