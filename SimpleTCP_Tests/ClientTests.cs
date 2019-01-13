@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -34,26 +35,27 @@ namespace Igor.TCP {
 
 			client.Connect();
 
-			client.getConnection.dataIDs.DefineCustomDataTypeForID<TestStruct>(55, OnSt_C);
-			client.getConnection.dataIDs.DefineCustomDataTypeForID<MyClass>(56, OnNd_C);
-			client.getConnection.dataIDs.DefineCustomDataTypeForID<C2>(57, OnRd_C);
-			client.getConnection.dataIDs.DefineCustomDataTypeForID<Text<int>>(58, OnSTh_C);
-			client.getConnection.dataIDs.DefineCustomDataTypeForID<List<MyClass>>(59, OnSTh_C);
+			client.DefineCustomPacket<TestStruct>(55, OnSt_C);
+			client.DefineCustomPacket<MyClass>(56, OnNd_C);
+			client.DefineCustomPacket<C2>(57, OnRd_C);
+			client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
+			client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
 
 
 
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<TestStruct>(55, OnSt_C);
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<MyClass>(56, OnNd_C);
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<C2>(57, OnRd_C);
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<Text<int>>(58, OnSTh_C);
-			server.GetConnection(1).dataIDs.DefineCustomDataTypeForID<List<MyClass>>(59, OnSTh_C);
+			server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);
+			server.DefineCustomPacket<MyClass>(1, 56, OnNd_C);
+			server.DefineCustomPacket<C2>(1, 57, OnRd_C);
+			server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
+			server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
+
 			await Task.Delay(200);
 
-			server.GetConnection(1).SendData(55, SimpleTCPHelper.GetBytesFromObject(new TestStruct { a = 50 }));
-			server.GetConnection(1).SendData(56, SimpleTCPHelper.GetBytesFromObject(new MyClass()));
-			server.GetConnection(1).SendData(57, SimpleTCPHelper.GetBytesFromObject(new C2()));
-			server.GetConnection(1).SendData(58, SimpleTCPHelper.GetBytesFromObject(new Text<int>()));
-			server.GetConnection(1).SendData(59, SimpleTCPHelper.GetBytesFromObject(new List<MyClass>()));
+			server.GetConnection(1).SendData(55, new TestStruct { a = 50 });
+			server.GetConnection(1).SendData(56, new MyClass());
+			server.GetConnection(1).SendData(57, new C2());
+			server.GetConnection(1).SendData(58, new Text<int>());
+			server.GetConnection(1).SendData(59, new List<MyClass>());
 
 			await Task.Delay(500);
 
@@ -61,25 +63,26 @@ namespace Igor.TCP {
 
 		}
 
-		private void OnSt_C(TestStruct arg1, byte arg2) {
+		private void OnSt_C(byte sender, TestStruct arg1) {
 			matches++;
 		}
 
-		private void OnSTh_C(List<MyClass> arg1, byte arg2) {
+		private void OnSTh_C(byte sender, List<MyClass> arg1) {
 			matches++;
 		}
 
-		private void OnSTh_C(Text<int> arg1, byte arg2) {
+		private void OnSTh_C(byte sender, Text<int> arg1) {
 			matches++;
 		}
 
-		private void OnRd_C(C2 arg1, byte arg2) {
+		private void OnRd_C(byte sender, C2 arg1) {
 			matches++;
 		}
 
-		private void OnNd_C(MyClass arg1, byte arg2) {
+		private void OnNd_C(byte sender, MyClass arg1) {
 			matches++;
 		}
+
 		[Serializable]
 		public struct TestStruct {
 			public int a;
