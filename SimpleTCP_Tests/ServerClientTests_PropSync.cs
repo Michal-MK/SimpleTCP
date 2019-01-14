@@ -70,7 +70,7 @@ namespace Igor.TCP {
 
 			server.UpdateProp(1, SYNC_ID, myProp);
 
-			await Task.Delay(200);
+			await Task.Delay(100);
 
 			for (int i = 0; i < checks.Length; i++) {
 				Assert.IsTrue(checks[i]);

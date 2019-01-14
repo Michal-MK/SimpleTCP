@@ -1,8 +1,10 @@
-﻿namespace Igor.TCP {
+﻿using System;
+
+namespace Igor.TCP {
 	/// <summary>
-	/// Event args holding basic information abou an ongoing synchronization of a property
+	/// Event args holding basic information about an ongoing synchronization of a property
 	/// </summary>
-	public class OnPropertySynchronizationEventArgs {
+	public class OnPropertySynchronizationEventArgs : EventArgs {
 
 		/// <summary>
 		/// The ID of the synchronization packet

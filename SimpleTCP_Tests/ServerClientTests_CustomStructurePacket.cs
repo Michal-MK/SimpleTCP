@@ -44,20 +44,23 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 
 			const byte PACKET_ID = 4;
-			//TODO fix tests
-			server.DefineTwoWayComunication<Test.TestDataStruct>(1, PACKET_ID, Get);
-			client.DefineTwoWayComunication<SameTest.TestDataStruct>(PACKET_ID, AlsoGet);
+			server.ProvideValue(1, PACKET_ID, Get);
+			client.ProvideValue(PACKET_ID, AlsoGet);
 
-			TCPResponse resp = await server.RaiseRequestAsync(1, PACKET_ID);
+			SameTest.TestDataStruct resp = await server.GetValue<SameTest.TestDataStruct>(1, PACKET_ID);
 
-			Assert.IsTrue(resp.dataType == typeof(Test.TestDataStruct));
-			Assert.IsTrue(resp.packetID == PACKET_ID);
+			Assert.IsTrue(resp.data[0] == "Ahoj");
+			Assert.IsTrue(resp.dataTest[0].ID == 0);
+			Assert.IsTrue(resp.dataTest[0].moreData[0] == "Hello");
 
-			TCPResponse resp2 = await client.RaiseRequestAsync(PACKET_ID);
+			Test.TestDataStruct resp2 = await client.GetValue<Test.TestDataStruct>(PACKET_ID);
 
-			Assert.IsTrue(resp2.dataType == typeof(SameTest.TestDataStruct));
-			Assert.IsTrue(resp2.packetID == PACKET_ID);
+			Assert.IsTrue(resp2.GetType() == typeof(Test.TestDataStruct));
+			Assert.IsTrue(resp2.data[0] == "Ahoooooooooooj");
+			Assert.IsTrue(resp2.dataTest[0].ID == 0);
+			Assert.IsTrue(resp2.dataTest[0].moreData[0] == "Hell00000000000");
 
+			
 			await server.Stop();
 		}
 

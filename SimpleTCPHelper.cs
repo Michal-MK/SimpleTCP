@@ -10,7 +10,14 @@ namespace Igor.TCP {
 	/// Static class containing useful methods for data transmission
 	/// </summary>
 	public static class SimpleTCPHelper {
-		private static BinaryFormatter bf = new BinaryFormatter();
+
+		private static BinaryFormatter bf;
+
+		static SimpleTCPHelper() {
+			bf = new BinaryFormatter();
+			bf.Binder = new MyBinder();
+		}
+
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
@@ -35,44 +42,45 @@ namespace Igor.TCP {
 
 		/// <summary>
 		/// Wrapper to all object to byte[] conversions
-		/// <para>WARNING! When serializing/deserializing custom structures the name-space has to match on both ends!</para> 
 		/// </summary>
 		internal static byte[] GetBytesFromObject(object obj) {
 			byte[] bytes;
 
-			if (obj is bool) {
-				bytes = BitConverter.GetBytes((bool)obj);
+			if (obj is bool b) {
+				bytes = BitConverter.GetBytes(b);
 			}
-			else if (obj is char) {
-				bytes = BitConverter.GetBytes((char)obj);
+			else if (obj is string str) {
+				bytes = System.Text.Encoding.UTF8.GetBytes(str);
 			}
-			else if (obj is double) {
-				bytes = BitConverter.GetBytes((double)obj);
+			else if (obj is char c) {
+				bytes = BitConverter.GetBytes(c);
 			}
-			else if (obj is float) {
-				bytes = BitConverter.GetBytes((float)obj);
+			else if (obj is double d) {
+				bytes = BitConverter.GetBytes(d);
 			}
-			else if (obj is int) {
-				bytes = BitConverter.GetBytes((int)obj);
+			else if (obj is float f) {
+				bytes = BitConverter.GetBytes(f);
 			}
-			else if (obj is long) {
-				bytes = BitConverter.GetBytes((long)obj);
+			else if (obj is int i) {
+				bytes = BitConverter.GetBytes(i);
 			}
-			else if (obj is short) {
-				bytes = BitConverter.GetBytes((short)obj);
+			else if (obj is long l) {
+				bytes = BitConverter.GetBytes(l);
 			}
-			else if (obj is uint) {
-				bytes = BitConverter.GetBytes((uint)obj);
+			else if (obj is short sh) {
+				bytes = BitConverter.GetBytes(sh);
 			}
-			else if (obj is ulong) {
-				bytes = BitConverter.GetBytes((bool)obj);
+			else if (obj is uint ui) {
+				bytes = BitConverter.GetBytes(ui);
 			}
-			else if (obj is ushort) {
-				bytes = BitConverter.GetBytes((ushort)obj);
+			else if (obj is ulong ul) {
+				bytes = BitConverter.GetBytes(ul);
+			}
+			else if (obj is ushort us) {
+				bytes = BitConverter.GetBytes(us);
 			}
 			else {
 				using (MemoryStream ms = new MemoryStream()) {
-					bf.Binder = new MyBinder();
 					bf.Serialize(ms, obj);
 					ms.Seek(0, SeekOrigin.Begin);
 					bytes = ms.ToArray();
@@ -81,9 +89,6 @@ namespace Igor.TCP {
 			return bytes;
 		}
 
-		/// <summary>
-		/// Objects have to be in the same name-space in order to return an actual object, otherwise a byte[] is returned!
-		/// </summary>
 		internal static object GetObject(Type t, byte[] bytes) {
 			object obj;
 
@@ -125,7 +130,6 @@ namespace Igor.TCP {
 					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(bytes, 0, bytes.Length);
 						ms.Seek(0, SeekOrigin.Begin);
-						bf.Binder = new MyBinder();
 						obj = bf.Deserialize(ms);
 					}
 				}
@@ -137,9 +141,6 @@ namespace Igor.TCP {
 			return obj;
 		}
 
-		/// <summary>
-		/// Objects have to be in the same name-space in order to return an actual object.
-		/// </summary>
 		internal static T GetObject<T>(byte[] bytes) where T : new() {
 			Type tType = typeof(T);
 
@@ -178,7 +179,6 @@ namespace Igor.TCP {
 					using (MemoryStream ms = new MemoryStream()) {
 						ms.Write(bytes, 0, bytes.Length);
 						ms.Seek(0, SeekOrigin.Begin);
-						bf.Binder = new MyBinder();
 						return (T)bf.Deserialize(ms);
 					}
 				}
@@ -188,17 +188,6 @@ namespace Igor.TCP {
 						" in that case you have to write your own deserializer as well.");
 				}
 			}
-		}
-
-		/// <summary>
-		/// Wrapper to all object to byte[] conversions, includes request ID 'customID' as first element of the array
-		/// </summary>
-		public static byte[] GetBytesFromObject(byte customID, object obj) {
-			byte[] bytes = GetBytesFromObject(obj);
-			byte[] result = new byte[1 + bytes.Length];
-			result[0] = customID;
-			Array.Copy(bytes, 0, result, 1, bytes.Length);
-			return result;
 		}
 
 		/// <summary>
@@ -232,10 +221,6 @@ namespace Igor.TCP {
 					sw.Write(b + ",");
 				}
 			}
-		}
-
-		internal static string BytesToString(byte[] bytes) {
-			return System.Text.Encoding.UTF8.GetString(bytes);
 		}
 	}
 }

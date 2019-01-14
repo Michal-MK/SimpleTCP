@@ -11,7 +11,7 @@ namespace Igor.TCP {
 	/// <summary>
 	/// TCP Server instance. Accepts client connections
 	/// </summary>
-	public class TCPServer {
+	public class TCPServer : IDisposable, IValueProvider, IRerouteCapable {
 
 		private TcpListener clientConnectionListener;
 
@@ -23,6 +23,10 @@ namespace Igor.TCP {
 		private ushort currentPort;
 
 		private ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
+
+		Dictionary<byte, Delegate> IValueProvider.providedValues { get; } = new Dictionary<byte, Delegate>();
+		Dictionary<byte, List<ReroutingInfo>> IRerouteCapable.rerouteDefinitions { get; } = new Dictionary<byte, List<ReroutingInfo>>();
+
 
 		/// <summary>
 		/// Client ID used by packets that come from the server
@@ -70,7 +74,6 @@ namespace Igor.TCP {
 		/// <exception cref="ServerStartException"></exception>
 		public async Task Start(ushort port) {
 			currentAddress = SimpleTCPHelper.GetActiveIPv4Address();
-			currentPort = port;
 			await StartServer(currentAddress, port);
 		}
 
@@ -80,7 +83,6 @@ namespace Igor.TCP {
 		/// <exception cref="ServerStartException"></exception>
 		public async Task Start(string ipAddress, ushort port) {
 			if (IPAddress.TryParse(ipAddress, out currentAddress)) {
-				currentPort = port;
 				await StartServer(currentAddress, port);
 			}
 			else {
@@ -102,11 +104,12 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="ServerStartException"></exception>
 		private Task StartServer(IPAddress address, ushort port) {
+			currentPort = port;
 			try {
 				return Task.Run(() => {
 					Console.WriteLine(address);
 					listenForClientConnections = true;
-					new Thread(new ThreadStart(async delegate () { await ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
+					new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
 					serverStartEvnt.Wait();
 					OnServerStarted?.Invoke(this, EventArgs.Empty);
 				});
@@ -211,12 +214,12 @@ namespace Igor.TCP {
 			}
 		}
 
-		private async Task ListenForClientConnection(IPAddress address, ushort port) {
+		private void ListenForClientConnection(IPAddress address, ushort port) {
 			clientConnectionListener = new TcpListener(address, port);
 			clientConnectionListener.Start();
 			serverStartEvnt.Set();
 			while (listenForClientConnections) {
-				TcpClient newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
+				TcpClient newlyConnected = clientConnectionListener.AcceptTcpClient();
 				byte ID = (byte)(connectedClients.Count + 1);
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
@@ -228,6 +231,7 @@ namespace Igor.TCP {
 					clientID = 0
 				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
+				conn.dataIDs.rerouter = this;
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
 				connectedClients.Add(ID, conn);
@@ -279,7 +283,7 @@ namespace Igor.TCP {
 				byte[] merged = new byte[rawData.Length + 1];
 				merged[0] = ID;
 				rawData.CopyTo(merged, 1);
-				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ServerPacketOriginID, rawData);
+				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ServerPacketOriginID, merged);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -298,7 +302,7 @@ namespace Igor.TCP {
 					throw new PacketIDTakenException(packetID, dataType, message);
 				}
 			}
-			DataIDs.providedValues.Add(packetID, function); //TODO
+			(this as IValueProvider).providedValues.Add(packetID, function);
 		}
 
 		/// <summary>
@@ -309,6 +313,7 @@ namespace Igor.TCP {
 				throw new PacketIDTakenException(packetID, dataType, message);
 			}
 			GetConnection(clientID).dataIDs.responseFunctionMap.Add(packetID, function);
+			GetConnection(clientID).dataIDs.requestTypeMap.Add(packetID, typeof(T));
 		}
 
 		/// <summary>
@@ -320,52 +325,11 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Shorthand for Request and response id definition, when both sides are senders 
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
-		public void DefineTwoWayComunication<TData>(byte clientID, byte packetID, Func<TData> function) {
-			DefineRequestEntry<TData>(clientID, packetID);
-			DefineResponseEntry(clientID, packetID, function);
-		}
-		/// <summary>
-		/// Define custom request by specifying its 'TData' type with selected 'ID'
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
-		public void DefineRequestEntry<TData>(byte clientID, byte packetID) {
-			if (connectedClients.ContainsKey(clientID)) {
-				if (connectedClients[clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
-					throw new PacketIDTakenException(packetID, dataType, message);
-				}
-				connectedClients[clientID].dataIDs.requestTypeMap.Add(packetID, typeof(TData));
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
-		/// <summary>
-		/// Define response 'function' to be called when request packet with 'ID' is received
-		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
-		[Obsolete("This function is superceeded by ProvideValue() and its overloads")]
-		public void DefineResponseEntry<TData>(byte clientID, byte packetID, Func<TData> function) {
-			if (connectedClients.ContainsKey(clientID)) {
-				if (connectedClients[clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
-					throw new PacketIDTakenException(packetID, dataType, message);
-				}
-				connectedClients[clientID].dataIDs.responseFunctionMap.Add(packetID, function);
-				return;
-			}
-			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
-		}
-
-		/// <summary>
 		/// Define rerouting of all packets from 'fromClient' coming to this server to under 'packetID' to be sent to 'toClient'
 		/// </summary>
 		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID) {
-			ReroutingInfo info = new ReroutingInfo(fromClient, toClient) { packetID = packetID };
-			DataIDs.AddToReroute(packetID, info);
+			ReroutingInfo info = new ReroutingInfo(toClient, packetID);
+			GetConnection(fromClient).dataIDs.SetForRerouting(info);
 		}
 
 		/// <summary>
@@ -375,15 +339,7 @@ namespace Igor.TCP {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
-			GetConnection(clientID).dataIDs.DefineCustomDataTypeForID(packetID, callback);
-		}
-
-		/// <summary>
-		/// Remove previously registered custom packet
-		/// </summary>
-		[Obsolete("This function is being removed due to not being used. No plans to reimplement the functionality.")]
-		public void RemoveCustomPacket(byte clientID, byte packetID) {
-			GetConnection(clientID).dataIDs.customIDs.Remove(packetID);
+			GetConnection(clientID).dataIDs.DefineCustomPacket(packetID, callback);
 		}
 
 		#endregion
@@ -403,5 +359,37 @@ namespace Igor.TCP {
 				}
 			}
 		}
+
+		#region IDisposable Support
+		private bool disposedValue = false; // To detect redundant calls
+
+		/// <summary>
+		/// Dispose of the object
+		/// </summary>
+		protected virtual void Dispose(bool disposing) {
+			if (!disposedValue) {
+				if (disposing) {
+
+				}
+				serverStartEvnt.Dispose();
+				disposedValue = true;
+			}
+		}
+
+		/// <summary>
+		/// Destructor
+		/// </summary>
+		~TCPServer() {
+			Dispose(false);
+		}
+
+		/// <summary>
+		/// Dispose of the object
+		/// </summary>
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+		#endregion
 	}
 }

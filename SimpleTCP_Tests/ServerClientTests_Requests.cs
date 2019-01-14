@@ -16,21 +16,19 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 
 			const byte PACKET_ID = 4;
-			//TODO fix tests
-			server.DefineTwoWayComunication<string>(1, PACKET_ID, ServerString);
-			client.DefineTwoWayComunication<string>(PACKET_ID, ClientString);
 
-			TCPResponse resp = await server.RaiseRequestAsync(1, PACKET_ID);
+			server.ProvideValue(1, PACKET_ID, ServerString);
+			client.ProvideValue(PACKET_ID, ClientString);
 
-			Assert.IsTrue(resp.dataType == typeof(string));
-			Assert.IsTrue(resp.packetID == PACKET_ID);
-			Assert.IsTrue(resp.getObject.ToString() == ClientString());
+			string resp = await server.GetValue<string>(1, PACKET_ID);
 
-			TCPResponse resp2 = await client.RaiseRequestAsync(PACKET_ID);
+			Assert.IsTrue(resp.GetType() == typeof(string));
+			Assert.IsTrue(resp == ClientString());
 
-			Assert.IsTrue(resp2.dataType == typeof(string));
-			Assert.IsTrue(resp2.packetID == PACKET_ID);
-			Assert.IsTrue(resp2.getObject.ToString() == ServerString());
+			string resp2 = await client.GetValue<string>(PACKET_ID);
+
+			Assert.IsTrue(resp2.GetType() == typeof(string));
+			Assert.IsTrue(resp2 == ServerString());
 
 			await server.Stop();
 		}

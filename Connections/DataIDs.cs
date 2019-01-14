@@ -6,19 +6,19 @@ namespace Igor.TCP {
 	/// <summary>
 	/// Class holding packet IDs and received data resolution and unpacking
 	/// </summary>
-	public class DataIDs {
+	internal class DataIDs {
 
 		#region Constant byte IDs and sizes of packets
 
 		/// <summary>
 		/// Packet ID for string
 		/// </summary>
-		public const byte StringID = 0;
+		internal const byte StringID = 0;
 
 		/// <summary>
 		/// Packet ID for Int64 (long)
 		/// </summary>
-		public const byte Int64ID = 1;
+		internal const byte Int64ID = 1;
 
 		/// <summary>
 		/// Packet ID for handling requests
@@ -38,17 +38,12 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Packet ID for sending client information to the other side
 		/// </summary>
-		public const byte ClientInformationID = 253;
+		internal const byte ClientInformationID = 253;
 
 		/// <summary>
 		/// Packet ID to signalize client disconnect
 		/// </summary>
-		public const byte ClientDisconnected = 254;
-
-		/// <summary>
-		/// NIY, no guarantee of safety when using this TODO
-		/// </summary>
-		public const byte ServerStop = 255;
+		internal const byte ClientDisconnected = 254;
 
 
 		internal const byte CLIENT_IDENTIFICATION_COMPLEXITY = 1;
@@ -62,30 +57,27 @@ namespace Igor.TCP {
 		internal readonly Dictionary<byte, CustomPacket> customIDs = new Dictionary<byte, CustomPacket>();
 		internal readonly Dictionary<byte, PropertySynchronization> syncedProperties = new Dictionary<byte, PropertySynchronization>();
 
-
 		internal readonly Dictionary<byte, Type> requestTypeMap = new Dictionary<byte, Type>();
 		internal readonly Dictionary<byte, Delegate> responseFunctionMap = new Dictionary<byte, Delegate>();
 
-
-		internal static readonly Dictionary<byte, List<ReroutingInfo>> rerouter = new Dictionary<byte, List<ReroutingInfo>>();
-
-		internal static readonly Dictionary<byte, Delegate> providedValues = new Dictionary<byte, Delegate>();
-
-		private readonly BinaryFormatter bf = new BinaryFormatter();
 		private RequestHandler responseManager;
 
 		internal event EventHandler<DataReroutedEventArgs> OnRerouteRequest;
 
 		private readonly TCPConnection _connection;
 
+		internal IRerouteCapable rerouter = null;
+
 		internal DataIDs(TCPConnection connection) {
 			responseManager = new RequestHandler(connection);
 			_connection = connection;
 		}
 
+		/// <exception cref="NotImplementedException"></exception>
+		/// <exception cref="UndefinedPacketException"></exception>
 		internal Type IndetifyID(byte packetID, byte fromClient, byte[] data) {
-			if (Reroute(packetID, fromClient, data)) {
-				return null;
+			if (rerouter != null && Reroute(packetID, fromClient, data)) {
+				return typeof(ReroutingInfo);
 			}
 
 			switch (packetID) {
@@ -97,12 +89,14 @@ namespace Igor.TCP {
 				}
 				case RequestReceptionID: {
 					byte requestID = data[0];
-					TCPRequest request = new TCPRequest(requestID);
 
 					if (!responseFunctionMap.ContainsKey(requestID)) {
-						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", request.packetID));
+						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", requestID));
 					}
-					object obj = responseFunctionMap[requestID].DynamicInvoke(null);
+
+					TCPRequest request = new TCPRequest(requestID);
+
+					object obj = responseFunctionMap[request.packetID].DynamicInvoke(null);
 
 					if (obj is byte[]) {
 						responseManager.HandleRequest(request, obj as byte[]);
@@ -113,8 +107,6 @@ namespace Igor.TCP {
 					return typeof(TCPRequest);
 				}
 				case ResponseReceptionID: {
-					TCPResponse response = new TCPResponse(data[0], new byte[data.Length - 1], responseManager.GetResponseType(data[0]));
-					Array.Copy(data, 1, response.rawData, 0, data.Length - 1);
 					return typeof(TCPResponse);
 				}
 				case PropertySyncID: {
@@ -137,7 +129,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Helper to find wheter the ID is already taken by something
+		/// Helper to find whether the ID is already taken by something
 		/// </summary>
 		internal bool IsIDReserved(byte packetID, out Type dataType, out string message) {
 
@@ -166,7 +158,7 @@ namespace Igor.TCP {
 				message = "This ID is taken by a packet for general data transmit";
 				return true;
 			}
-			if (providedValues.ContainsKey(packetID)) {
+			if (_connection.valueProvider.providedValues.ContainsKey(packetID)) {
 				dataType = typeof(object);
 				message = "This ID is taken by a packet for general data transmit";
 				return true;
@@ -177,36 +169,40 @@ namespace Igor.TCP {
 		}
 
 		private bool Reroute(byte ID, byte fromClient, byte[] data) {
-			if (rerouter.ContainsKey(ID)) {
+			if (rerouter.rerouteDefinitions.ContainsKey(ID)) {
 				ReroutingInfo info = null;
-				for (int i = 0; i < rerouter[ID].Count; i++) {
-					if (rerouter[ID][i].fromClient == fromClient && responseManager.connection.myInfo.clientID != rerouter[ID][i].toClient) {
-						info = rerouter[ID][i];
+				for (int i = 0; i < rerouter.rerouteDefinitions[ID].Count; i++) {
+					if (responseManager.connection.myInfo.clientID != rerouter.rerouteDefinitions[ID][i].toClient) {
+						info = rerouter.rerouteDefinitions[ID][i];
+						break;
 					}
 				}
 				if (info == null) {
 					return false;
 				}
-				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, fromClient, (info.isUserDefined ? info.dataID : info.packetID), data, info.isUserDefined));
+				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, fromClient, info.packetID, data));
 				return true;
 			}
 			return false;
 		}
 
-		internal void DefineCustomDataTypeForID<TData>(byte ID, Action<byte, TData> callback) {
+		internal void DefineCustomPacket<TData>(byte ID, Action<byte, TData> callback) {
 			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<byte, object>((b, o) => { callback(b, (TData)o); })));
 		}
 
-		internal void RemoveCustomDefinitionForID(byte ID) {
+		internal void RemoveCustoMPacket(byte ID) {
 			customIDs.Remove(ID);
 		}
 
-		internal static void AddToReroute(byte packetID, ReroutingInfo info) {
-			if (!rerouter.ContainsKey(packetID)) {
-				rerouter.Add(packetID, new List<ReroutingInfo>() { info });
+		internal void SetForRerouting(ReroutingInfo info) {
+			if (!rerouter.rerouteDefinitions.ContainsKey(info.packetID)) {
+				rerouter.rerouteDefinitions.Add(info.packetID, new List<ReroutingInfo>() { info });
 			}
 			else {
-				rerouter[packetID].Add(info);
+				if (rerouter.rerouteDefinitions[info.packetID].Find((p) => { return p.toClient == info.toClient && p.packetID == info.packetID; }) != null) {
+					rerouter.rerouteDefinitions[info.packetID].Add(info);
+				}
+				throw new PacketIDTakenException(info.packetID, null, "Attempted to add a rerouting definition, but such definition already exists!");
 			}
 		}
 	}
