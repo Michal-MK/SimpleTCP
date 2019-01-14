@@ -4,6 +4,7 @@ namespace Igor.TCP {
 	/// <summary>
 	/// Exception signifying that the packetID is already taken
 	/// </summary>
+	[Serializable]
 	public class PacketIDTakenException : Exception {
 
 		/// <summary>
@@ -15,7 +16,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// The ID that was attepmted to register
+		/// The ID that was attempted to register
 		/// </summary>
 		public byte packetID { get; set; }
 

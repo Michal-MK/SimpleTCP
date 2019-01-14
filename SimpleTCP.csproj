@@ -46,6 +46,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Connections\ClientToServerConnection.cs" />
+    <Compile Include="Connections\IRerouteCapable.cs" />
+    <Compile Include="Connections\IValueProvider.cs" />
     <Compile Include="DataTransfer\RequestCreator.cs" />
     <Compile Include="DataTransfer\RequestHandler.cs" />
     <Compile Include="Events\OnPropertySynchronizationEventArgs.cs" />

@@ -13,7 +13,7 @@ namespace Igor.TCP {
 		internal TCPServer server;
 
 		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
-			: base(client, serverInfo, clientInfo) {
+			: base(client, serverInfo, clientInfo, server) {
 			this.server = server;
 		}
 
@@ -26,9 +26,6 @@ namespace Igor.TCP {
 			}
 			if (data.dataID == DataIDs.ClientDisconnected) {
 				_OnClientDisconnected.Invoke(this, data.senderID);
-			}
-			if (data.dataID == DataIDs.ServerStop && server.serverConfiguration.clientCanShutdownServer) {
-				Task.Run(server.Stop);
 			}
 		}
 

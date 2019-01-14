@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -7,9 +8,11 @@ namespace Igor.TCP {
 	/// <summary>
 	/// Client that can connect to a TCPServer
 	/// </summary>
-	public class TCPClient {
+	public class TCPClient : IValueProvider {
 		private readonly IPAddress address;
 		private readonly ushort port;
+
+		Dictionary<byte, Delegate> IValueProvider.providedValues { get; } = new Dictionary<byte, Delegate>();
 
 		/// <summary>
 		/// Information about this client
@@ -107,7 +110,6 @@ namespace Igor.TCP {
 			set { getConnection.listeningForData = value; }
 		}
 
-
 		/// <summary>
 		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
@@ -118,53 +120,20 @@ namespace Igor.TCP {
 		#region Communication Definitions
 
 		/// <summary>
-		/// Shorthand for <see cref="DefineRequestEntry{TData}(byte)"/> and <see cref="DefineResponseEntry{TData}(byte, Func{TData})"/>, transmission like.
+		/// Provide a value to all connected clients
 		/// </summary>
-		public void DefineTwoWayComunication<TData>(byte packetID, Func<TData> function) {
-			DefineRequestEntry<TData>(packetID);
-			DefineResponseEntry(packetID, function);
-		}
-
-		/// <summary>
-		/// Shorthand for <see cref="CancelRequestID(byte)"/> and <see cref="CancelResponseID(byte)"/>, transmission like.
-		/// </summary>
-		public void CancelTwoWayComunication(byte packetID) {
-			CancelRequestID(packetID);
-			CancelResponseID(packetID);
-		}
-
-		/// <summary>
-		/// Define custom request by specifying its 'TData' type with selected 'ID'
-		/// </summary>
-		public void DefineRequestEntry<TData>(byte packetID) {
-			if (getConnection.dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
-				throw new PacketIDTakenException(packetID, dataType, message);
-			}
-			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(TData));
-		}
-
-		/// <summary>
-		/// Cancel custom request of 'TData' under 'ID'
-		/// </summary>
-		public void CancelRequestID(byte packetID) {
-			getConnection.dataIDs.requestTypeMap.Remove(packetID);
-		}
-
-		/// <summary>
-		/// Define response 'function' to be called when request packet with 'ID' is received
-		/// </summary>
-		public void DefineResponseEntry<TData>(byte packetID, Func<TData> function) {
-			if (getConnection.dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
-				throw new PacketIDTakenException(packetID, dataType, message);
-			}
+		public void ProvideValue<T>(byte packetID, Func<T> function) {
+			(this as IValueProvider).providedValues.Add(packetID, function);
 			getConnection.dataIDs.responseFunctionMap.Add(packetID, function);
+			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(T));
 		}
 
 		/// <summary>
-		/// Cancel response to request with 'ID'
+		/// Request a value from a client
 		/// </summary>
-		public void CancelResponseID(byte packetID) {
-			getConnection.dataIDs.responseFunctionMap.Remove(packetID);
+		public async Task<T> GetValue<T>(byte packetID) {
+			TCPResponse resp = await getConnection.requestCreator.Request(packetID);
+			return (T)resp.getObject;
 		}
 
 		/// <summary>
@@ -174,25 +143,10 @@ namespace Igor.TCP {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
-			getConnection.dataIDs.DefineCustomDataTypeForID<TData>(packetID, callback);
-		}
-
-		/// <summary>
-		/// Remove previously registered custom packet
-		/// </summary>
-		public void RemoveCustomPacket(byte packetID) {
-			getConnection.dataIDs.customIDs.Remove(packetID);
+			getConnection.dataIDs.DefineCustomPacket<TData>(packetID, callback);
 		}
 
 		#endregion
-
-		/// <summary>
-		/// Raises a new request with 'ID' and sends response via 'OnRequestHandeled' event
-		/// </summary>
-		public async Task<TCPResponse> RaiseRequestAsync(byte packetID) {
-			TCPResponse data = await getConnection.requestCreator.Request(packetID);
-			return data;
-		}
 
 		/// <summary>
 		/// Disconnect from current server and dispose of this client
@@ -204,7 +158,7 @@ namespace Igor.TCP {
 				getConnection = null;
 			}
 			else {
-				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything");
+				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything...");
 			}
 		}
 

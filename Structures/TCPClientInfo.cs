@@ -28,7 +28,7 @@ namespace Igor.TCP {
 		public byte clientID { get; internal set; } = 255;
 
 		/// <summary>
-		/// Initialize new ClientInfo
+		/// Initialize new <see cref="TCPClientInfo"/>
 		/// </summary>
 		public TCPClientInfo(string computerName, bool isServer, IPAddress clientAddress) {
 			this.isServer = isServer;

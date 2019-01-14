@@ -11,7 +11,7 @@ namespace Igor.TCP {
 		internal TCPClient client;
 
 		internal ClientToServerConnection(TcpClient server, TCPClientInfo myInfo, TCPClientInfo serverInfo, TCPClient client)
-			: base(server, myInfo, serverInfo) {
+			: base(server, myInfo, serverInfo, client) {
 			this.client = client;
 		}
 
@@ -33,9 +33,9 @@ namespace Igor.TCP {
 			}
 			if (data.dataType == typeof(OnPropertySynchronizationEventArgs)) {
 				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
-					syncID = (byte)data.receivedObject,
-					propertyName = client.getConnection.dataIDs.syncedProperties[(byte)data.receivedObject].property.Name,
-					instance = client.getConnection.dataIDs.syncedProperties[(byte)data.receivedObject].classInstance
+					syncID = ((byte[])data.receivedObject)[0],
+					propertyName = client.getConnection.dataIDs.syncedProperties[((byte[])data.receivedObject)[0]].property.Name,
+					instance = client.getConnection.dataIDs.syncedProperties[((byte[])data.receivedObject)[0]].classInstance
 				});
 			}
 		}

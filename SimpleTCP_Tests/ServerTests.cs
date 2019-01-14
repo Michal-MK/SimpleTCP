@@ -15,7 +15,7 @@ namespace Igor.TCP {
 		public async Task ServerStart() {
 			TCPServer server = new TCPServer(new ServerConfiguration(true));
 			server.OnServerStarted += Server_OnServerStarted;
-			Assert.IsTrue(server.serverConfiguration.clientCanShutdownServer);
+			Assert.IsTrue(server.serverConfiguration.clientCanRequestFromServer);
 
 			await server.Start(65000);
 
@@ -36,5 +36,15 @@ namespace Igor.TCP {
 		}
 
 		#endregion
+	}
+}
+
+namespace Testing {
+	using Igor.TCP;
+	public class TestT {
+		public void T() {
+			ConnectionData c = new ConnectionData("", 5);
+			//DataIDs //Inaccessible
+		}
 	}
 }

@@ -42,18 +42,11 @@ namespace Igor.TCP {
 		/// </summary>
 		public RequestHandler responseGenerator { get; }
 
-		/// <summary>
-		/// Define simple data packets and get internally/externally defined packet IDs
-		/// </summary>
-		public DataIDs dataIDs { get; }
-
 		#endregion
 
 		#region Internal and private properties/fields
 
 		internal NetworkStream mainNetworkStream;
-
-		private BinaryFormatter bf = new BinaryFormatter();
 
 		internal event EventHandler<TCPResponse> _OnResponse;
 
@@ -65,15 +58,18 @@ namespace Igor.TCP {
 
 		internal RequestCreator requestCreator;
 		internal Queue<SendQueueItem> queuedData = new Queue<SendQueueItem>();
+
+		internal DataIDs dataIDs { get; }
+
+		internal IValueProvider valueProvider;
 		#endregion
 
-		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide) {
+		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide, IValueProvider valueProvider) {
 			this.infoAboutOtherSide = infoAboutOtherSide;
 			this.myInfo = myInfo;
 
 			mainNetworkStream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
-			bf.Binder = new MyBinder();
 
 			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = string.Format("{0} ({1}) \"{2}\" Sender", infoAboutOtherSide.clientAddress, infoAboutOtherSide.clientID, infoAboutOtherSide.computerName) };
 			senderThread.Start();
@@ -82,6 +78,8 @@ namespace Igor.TCP {
 
 			requestCreator = new RequestCreator(this);
 			responseGenerator = new RequestHandler(this);
+
+			this.valueProvider = valueProvider;
 		}
 
 		#region Send Primitives (string and long)
@@ -139,9 +137,11 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send custom data type using internal serialization/deserialization mechanisms
 		/// </summary>
+		/// <exception cref="UndefinedPacketException"></exception>
+		/// <exception cref="InvalidOperationException"></exception>
 		public void SendData<TData>(byte packetID, TData data) {
 			if (!dataIDs.customIDs.ContainsKey(packetID)) {
-				throw new NotImplementedException($"Trying to send data with {packetID}, but this data was not defined!");
+				throw new UndefinedPacketException($"Trying to send data with {packetID}, but this data was not defined!", packetID, typeof(TData));
 			}
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Trying to send data that is not marked as [Serializable]");
@@ -153,7 +153,7 @@ namespace Igor.TCP {
 		/// Send data immediately on current thread, generally unsafe and should be avoided if possible
 		/// </summary>
 		internal void SendDataImmediate(byte packetID, byte[] data) {
-			SendData(new SendQueueItem(packetID, myInfo.clientID, data)); //??
+			SendData(new SendQueueItem(packetID, myInfo.clientID, data));
 		}
 
 		#region Queue sending
@@ -213,11 +213,15 @@ namespace Igor.TCP {
 
 				#endregion
 
-				//TODO change for IDs
-				if (data.dataType == typeof(TCPResponse)) {
+				if(dataIDs.customIDs.ContainsKey(data.dataID)) {
+					dataIDs.customIDs[data.dataID].action.Invoke(data.senderID, data.receivedObject);
+					continue;
+				}
+
+				if (data.dataID == DataIDs.ResponseReceptionID) {
 					_OnResponse(this, (TCPResponse)data.receivedObject);
 				}
-				else if (data.dataType == typeof(TCPRequest)) {
+				else if (data.dataID == DataIDs.RequestReceptionID) {
 					continue;
 				}
 				else {
@@ -271,7 +275,16 @@ namespace Igor.TCP {
 			#endregion
 
 			Type dataType = dataIDs.IndetifyID(GetPacketID(packetID), GetSenderID(fromClient), data);
-			object dataObject = GetObjectFromData(dataType, data);
+			object dataObject;
+
+			if (dataType == typeof(TCPResponse)) {
+				dataObject = new TCPResponse(data[0], new byte[data.Length - 1], responseGenerator.GetResponseType(data[0]));
+				Array.Copy(data, 1, (dataObject as TCPResponse).rawData, 0, (dataObject as TCPResponse).rawData.Length);
+			}
+			else {
+				 dataObject = GetObjectFromData(dataType, data);
+			}
+
 			return new ReceivedData(dataType, GetSenderID(fromClient), GetPacketID(packetID), dataObject);
 		}
 
@@ -279,7 +292,9 @@ namespace Igor.TCP {
 
 		private byte GetSenderID(byte[] fromClient) {
 			if (DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY != 1) {
+#pragma warning disable CS0162 // Unreachable code detected
 				Debugger.Break();
+#pragma warning restore CS0162 // Unreachable code detected	
 				throw new Exception();
 			}
 			return fromClient[0];
@@ -287,7 +302,9 @@ namespace Igor.TCP {
 
 		private byte GetPacketID(byte[] packetID) {
 			if (DataIDs.PACKET_ID_COMPLEXITY != 1) {
+#pragma warning disable CS0162 // Unreachable code detected
 				Debugger.Break();
+#pragma warning restore CS0162 // Unreachable code detected
 				throw new Exception();
 			}
 			return packetID[0];

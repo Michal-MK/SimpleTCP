@@ -4,15 +4,10 @@
 	/// Class holding data necessary for rerouting packets from client to client
 	/// </summary>
 	internal class ReroutingInfo {
-		internal ReroutingInfo(byte from, byte to) {
-			fromClient = from;
-			toClient = to;
+		internal ReroutingInfo(byte toClient, byte packetID) {
+			this.toClient = toClient;
+			this.packetID = packetID;
 		}
-
-		/// <summary>
-		/// ID this packet originated from
-		/// </summary>
-		internal byte fromClient;
 
 		/// <summary>
 		/// ID this packet is meant for
@@ -23,15 +18,5 @@
 		/// ID of the packet
 		/// </summary>
 		internal byte packetID;
-
-		/// <summary>
-		/// ID if the carried data
-		/// </summary>
-		internal byte dataID;
-
-		/// <summary>
-		/// Was this data user defined
-		/// </summary>
-		internal bool isUserDefined;
 	}
 }
