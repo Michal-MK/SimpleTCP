@@ -4,6 +4,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Threading;
 using System.Diagnostics;
+using System.IO;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -71,9 +72,9 @@ namespace Igor.TCP {
 			mainNetworkStream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
 
-			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = string.Format("{0} ({1}) \"{2}\" Sender", infoAboutOtherSide.clientAddress, infoAboutOtherSide.clientID, infoAboutOtherSide.computerName) };
+			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = $"Owner:{myInfo.computerName}, IsClient={!myInfo.isServer} Sender Thread" };
 			senderThread.Start();
-			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = string.Format("{0} ({1}) \"{2}\" Receiver", infoAboutOtherSide.clientAddress, infoAboutOtherSide.clientID, infoAboutOtherSide.computerName) };
+			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = $"Owner:{myInfo.computerName}, IsClient={!myInfo.isServer} Receiver Thread" };
 			receiverThread.Start();
 
 			requestCreator = new RequestCreator(this);
@@ -161,14 +162,15 @@ namespace Igor.TCP {
 		private ManualResetEventSlim evnt;
 
 		internal void SendDataFromQueue() {
-			evnt = new ManualResetEventSlim();
-			while (sendingData) {
-				evnt.Reset();
-				if (queuedData.Count > 0) {
-					SendData(queuedData.Dequeue());
-				}
-				else {
-					evnt.Wait();
+			using (evnt = new ManualResetEventSlim()) {
+				while (sendingData) {
+					evnt.Reset();
+					if (queuedData.Count > 0) {
+						SendData(queuedData.Dequeue());
+					}
+					else {
+						evnt.Wait();
+					}
 				}
 			}
 		}
@@ -194,7 +196,31 @@ namespace Igor.TCP {
 
 		internal void DataReception() {
 			while (listeningForData) {
-				ReceivedData data = ReceiveData();
+				ReceivedData data;
+				try {
+					data = ReceiveData();
+				}
+				catch (ObjectDisposedException) {
+					listeningForData = false;
+					return;
+				}
+				catch (IOException e) {
+					if (e.InnerException is SocketException socketE) {
+						if (socketE.SocketErrorCode == SocketError.Interrupted) {
+							listeningForData = false;
+							return;
+						}
+					}
+					continue;
+				}
+
+				if (!listeningForData)
+					return;
+
+				if(data.dataType == typeof(SocketException)) {
+					listeningForData = false;
+					return;
+				}
 
 				#region Primitives
 
@@ -213,7 +239,7 @@ namespace Igor.TCP {
 
 				#endregion
 
-				if(dataIDs.customIDs.ContainsKey(data.dataID)) {
+				if (dataIDs.customIDs.ContainsKey(data.dataID)) {
 					dataIDs.customIDs[data.dataID].action.Invoke(data.senderID, data.receivedObject);
 					continue;
 				}
@@ -248,8 +274,11 @@ namespace Igor.TCP {
 
 			Int64 totalReceived = 0;
 
-			while (totalReceived < packetSize.Length) {
+			while (totalReceived < packetSize.Length && listeningForData) {
 				totalReceived += mainNetworkStream.Read(packetSize, 0, packetSize.Length);
+				if (totalReceived == 0) {
+					return new ReceivedData(typeof(SocketException),0,0,0);
+				}
 			}
 			totalReceived = 0;
 			Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
@@ -257,7 +286,7 @@ namespace Igor.TCP {
 				totalReceived += mainNetworkStream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
 			}
 			totalReceived = 0;
-			while (totalReceived < DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY) {
+			while (totalReceived < DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY && listeningForData) {
 				totalReceived += mainNetworkStream.Read(fromClient, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 			}
 			if (debugPrints) {
@@ -265,7 +294,7 @@ namespace Igor.TCP {
 			}
 			byte[] data = new byte[toReceive];
 			totalReceived = 0;
-			while (totalReceived < toReceive) {
+			while (totalReceived < toReceive && listeningForData) {
 				totalReceived += mainNetworkStream.Read(data, (int)totalReceived, (int)(toReceive - totalReceived));
 				if (debugPrints) {
 					Console.WriteLine("Waiting for Data " + totalReceived + "/" + toReceive + " bytes");
@@ -281,8 +310,11 @@ namespace Igor.TCP {
 				dataObject = new TCPResponse(data[0], new byte[data.Length - 1], responseGenerator.GetResponseType(data[0]));
 				Array.Copy(data, 1, (dataObject as TCPResponse).rawData, 0, (dataObject as TCPResponse).rawData.Length);
 			}
+			else if (dataType == typeof(ClientDisconnectedPacket)) {
+				dataObject = data[0];
+			}
 			else {
-				 dataObject = GetObjectFromData(dataType, data);
+				dataObject = GetObjectFromData(dataType, data);
 			}
 
 			return new ReceivedData(dataType, GetSenderID(fromClient), GetPacketID(packetID), dataObject);
@@ -326,7 +358,6 @@ namespace Igor.TCP {
 		/// </summary>
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
-				evnt.Dispose();
 				requestCreator.Dispose();
 				mainNetworkStream.Dispose();
 				disposedValue = true;

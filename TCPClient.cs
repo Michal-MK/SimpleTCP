@@ -143,7 +143,7 @@ namespace Igor.TCP {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
-			getConnection.dataIDs.DefineCustomPacket<TData>(packetID, callback);
+			getConnection.dataIDs.DefineCustomPacket(packetID, callback);
 		}
 
 		#endregion
