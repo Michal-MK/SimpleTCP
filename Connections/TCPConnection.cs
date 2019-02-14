@@ -4,6 +4,7 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Threading;
 using System.Diagnostics;
+using System.IO;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -90,7 +91,7 @@ namespace Igor.TCP {
 		public void SendData(string data) {
 			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
+				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 			}
 			SendData(DataIDs.StringID, myInfo.clientID, bytes);
 		}
@@ -101,7 +102,7 @@ namespace Igor.TCP {
 		public void SendData(Int64 data) {
 			byte[] bytes = BitConverter.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
+				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 			}
 			SendData(DataIDs.Int64ID, myInfo.clientID, bytes);
 		}
@@ -109,7 +110,7 @@ namespace Igor.TCP {
 		#endregion
 
 		/// <summary>
-		/// Send a singe byte to the connected device, used for requests
+		/// Send a single byte to the connected device
 		/// </summary>
 		internal void SendData(byte packetID, byte requestID) {
 			SendData(packetID, myInfo.clientID, new byte[1] { requestID });
@@ -144,7 +145,7 @@ namespace Igor.TCP {
 				throw new UndefinedPacketException($"Trying to send data with {packetID}, but this data was not defined!", packetID, typeof(TData));
 			}
 			if (!typeof(TData).IsSerializable) {
-				throw new InvalidOperationException($"Trying to send data that is not marked as [Serializable]");
+				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
 			}
 			SendData(packetID, myInfo.clientID, SimpleTCPHelper.GetBytesFromObject(data));
 		}
@@ -171,11 +172,6 @@ namespace Igor.TCP {
 					evnt.Wait();
 				}
 			}
-		}
-
-		internal void EnquqeAndSend(SendQueueItem item) {
-			queuedData.Enqueue(item);
-			evnt.Set();
 		}
 
 		private void SendData(SendQueueItem item) {
@@ -213,7 +209,7 @@ namespace Igor.TCP {
 
 				#endregion
 
-				if(dataIDs.customIDs.ContainsKey(data.dataID)) {
+				if (dataIDs.customIDs.ContainsKey(data.dataID)) {
 					dataIDs.customIDs[data.dataID].action.Invoke(data.senderID, data.receivedObject);
 					continue;
 				}
@@ -242,7 +238,8 @@ namespace Igor.TCP {
 			if (debugPrints) {
 				Console.WriteLine("Waiting for next packet...");
 			}
-			byte[] packetSize = new byte[8];
+
+			byte[] packetSize = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
 			byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
 			byte[] fromClient = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 
@@ -282,7 +279,7 @@ namespace Igor.TCP {
 				Array.Copy(data, 1, (dataObject as TCPResponse).rawData, 0, (dataObject as TCPResponse).rawData.Length);
 			}
 			else {
-				 dataObject = GetObjectFromData(dataType, data);
+				dataObject = GetObjectFromData(dataType, data);
 			}
 
 			return new ReceivedData(dataType, GetSenderID(fromClient), GetPacketID(packetID), dataObject);

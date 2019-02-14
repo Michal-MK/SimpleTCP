@@ -191,6 +191,7 @@ namespace Igor.TCP {
 		public void SetListeningForData(byte clientID, bool state) {
 			if (connectedClients.ContainsKey(clientID)) {
 				connectedClients[clientID].listeningForData = state;
+				connectedClients[clientID].DataReception();
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -250,7 +251,7 @@ namespace Igor.TCP {
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
-				connectedClients[e.forwardedClient]._SendDataRerouted(e.packetID, e.originClient, e.data);
+				connectedClients[e.forwardedClient].SendData(e.packetID, e.originClient, e.data);
 				OnDataRerouted?.Invoke(this, e);
 				return;
 			}
@@ -344,6 +345,8 @@ namespace Igor.TCP {
 
 		#endregion
 
+		#region Send To All custom data, string, and long
+
 		/// <summary>
 		/// Send 'data' to all connected clients.
 		/// </summary>
@@ -359,6 +362,26 @@ namespace Igor.TCP {
 				}
 			}
 		}
+
+		/// <summary>
+		/// Send string to all connected clients.
+		/// </summary>
+		public void SendToAll(string data) {
+			foreach (ServerToClientConnection info in connectedClients.Values) {
+				info.SendData(data);
+			}
+		}
+
+		/// <summary>
+		/// Send Int64 to all connected clients.
+		/// </summary>
+		public void SendToAll(Int64 data) {
+			foreach (ServerToClientConnection info in connectedClients.Values) {
+				info.SendData(data);
+			}
+		}
+
+		#endregion
 
 		#region IDisposable Support
 		private bool disposedValue = false; // To detect redundant calls

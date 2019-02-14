@@ -46,7 +46,7 @@ namespace Igor.TCP {
 		/// Enqueue data to be rerouted to the sender queue, will retain original sender ID
 		/// </summary>
 		internal void _SendDataRerouted(byte universalID, byte originID, byte[] data) {
-			EnquqeAndSend(new SendQueueItem(universalID, originID, data, true)); //??
+			SendData(universalID, originID, data);
 		}
 	}
 }

@@ -107,7 +107,15 @@ namespace Igor.TCP {
 		/// </summary>
 		public bool isListeningForData {
 			get { return getConnection.listeningForData; }
-			set { getConnection.listeningForData = value; }
+			set {
+				if(getConnection.listeningForData == value) {
+					return;
+				}
+				getConnection.listeningForData = value;
+				if (value) {
+					getConnection.DataReception();
+				}
+			}
 		}
 
 		/// <summary>
