@@ -219,8 +219,17 @@ namespace Igor.TCP {
 			clientConnectionListener = new TcpListener(address, port);
 			clientConnectionListener.Start();
 			serverStartEvnt.Set();
+			TcpClient newlyConnected = null;
 			while (listenForClientConnections) {
-				TcpClient newlyConnected = clientConnectionListener.AcceptTcpClient();
+				try {
+					newlyConnected = clientConnectionListener.AcceptTcpClient();
+				}
+				catch (SocketException e) {
+					if (e.SocketErrorCode == SocketError.Interrupted) {
+						listenForClientConnections = false;
+						return;
+					}
+				}
 				byte ID = (byte)(connectedClients.Count + 1);
 				NetworkStream newStream = newlyConnected.GetStream();
 				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
