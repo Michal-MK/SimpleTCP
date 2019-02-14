@@ -20,19 +20,12 @@
 		internal byte[] rawData;
 
 		/// <summary>
-		/// Is this packet rerouted by the server 
-		/// </summary>
-		internal bool reroutedByServer;
-
-
-		/// <summary>
 		/// Default constructor
 		/// </summary>
-		internal SendQueueItem(byte packetID, byte originClientID, byte[] rawData, bool reroutedByServer = false) {
+		internal SendQueueItem(byte packetID, byte originClientID, byte[] rawData) {
 			this.packetID = packetID;
 			this.originClientID = originClientID;
 			this.rawData = rawData;
-			this.reroutedByServer = reroutedByServer;
 		}
 	}
 }

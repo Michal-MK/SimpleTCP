@@ -41,7 +41,7 @@ namespace Igor.TCP {
 
 			client.Connect();
 
-			await Task.Delay(100);
+			await Task.Delay(200);
 
 			const byte PACKET_ID = 4;
 			server.ProvideValue(1, PACKET_ID, Get);

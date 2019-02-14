@@ -91,7 +91,7 @@ namespace Igor.TCP {
 		public void SendData(string data) {
 			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
+				Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 			}
 			SendData(DataIDs.StringID, myInfo.clientID, bytes);
 		}
@@ -102,7 +102,7 @@ namespace Igor.TCP {
 		public void SendData(Int64 data) {
 			byte[] bytes = BitConverter.GetBytes(data);
 			if (debugPrints) {
-				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_SIZE_COMPLEXITY);
+				Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 			}
 			SendData(DataIDs.Int64ID, myInfo.clientID, bytes);
 		}
@@ -110,7 +110,7 @@ namespace Igor.TCP {
 		#endregion
 
 		/// <summary>
-		/// Send a singe byte to the connected device, used for requests
+		/// Send a single byte to the connected device
 		/// </summary>
 		internal void SendData(byte packetID, byte requestID) {
 			SendData(packetID, myInfo.clientID, new byte[1] { requestID });
@@ -145,7 +145,7 @@ namespace Igor.TCP {
 				throw new UndefinedPacketException($"Trying to send data with {packetID}, but this data was not defined!", packetID, typeof(TData));
 			}
 			if (!typeof(TData).IsSerializable) {
-				throw new InvalidOperationException($"Trying to send data that is not marked as [Serializable]");
+				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
 			}
 			SendData(packetID, myInfo.clientID, SimpleTCPHelper.GetBytesFromObject(data));
 		}
@@ -266,7 +266,8 @@ namespace Igor.TCP {
 			if (debugPrints) {
 				Console.WriteLine("Waiting for next packet...");
 			}
-			byte[] packetSize = new byte[8];
+
+			byte[] packetSize = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
 			byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
 			byte[] fromClient = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 

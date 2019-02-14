@@ -50,7 +50,7 @@ namespace Igor.TCP {
 
 		internal const byte PACKET_ID_COMPLEXITY = 1;
 
-		internal const byte PACKET_TOTAL_SIZE_COMPLEXITY = 8;
+		internal const byte PACKET_TOTAL_HEADER_SIZE_COMPLEXITY = 8;
 
 		#endregion
 
@@ -91,7 +91,7 @@ namespace Igor.TCP {
 					byte requestID = data[0];
 
 					if (!responseFunctionMap.ContainsKey(requestID)) {
-						throw new NotImplementedException(string.Format("Server is requesting response for '{0}' byteID, but no such ID is defined!", requestID));
+						throw new NotImplementedException($"Server is requesting response for '{requestID}' byteID, but no such ID is defined!");
 					}
 
 					TCPRequest request = new TCPRequest(requestID);
@@ -111,6 +111,7 @@ namespace Igor.TCP {
 				}
 				case PropertySyncID: {
 					byte[] realData = new byte[data.Length - 1];
+					//Efficient unsafe way to get array without copying
 					Array.Copy(data, 1, realData, 0, realData.Length);
 					syncedProperties[data[0]].property.SetValue(syncedProperties[data[0]].classInstance,
 						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
