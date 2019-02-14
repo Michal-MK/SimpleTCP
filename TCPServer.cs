@@ -252,14 +252,14 @@ namespace Igor.TCP {
 
 		#region Private Events
 
-		private void ClientDisconnected(object sender, byte e) {
-			OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e));
-			connectedClients.Remove(e);
+		private void ClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
+			OnClientDisconnected?.Invoke(this, e);
+			connectedClients.Remove(e.clientID);
 		}
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
 			if (connectedClients.ContainsKey(e.forwardedClient)) {
-				connectedClients[e.forwardedClient]._SendDataRerouted(e.packetID, e.originClient, e.data);
+				connectedClients[e.forwardedClient].SendData(e.packetID, e.originClient, e.data);
 				OnDataRerouted?.Invoke(this, e);
 				return;
 			}

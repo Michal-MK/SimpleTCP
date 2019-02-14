@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Threading.Tasks;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -8,7 +7,7 @@ namespace Igor.TCP {
 	/// </summary>
 	public sealed class ServerToClientConnection : TCPConnection {
 
-		internal event EventHandler<byte> _OnClientDisconnected;
+		internal event EventHandler<ClientDisconnectedEventArgs> _OnClientDisconnected;
 
 		internal TCPServer server;
 
@@ -25,7 +24,10 @@ namespace Igor.TCP {
 				DisconnectClient(data.senderID);
 			}
 			if (data.dataID == DataIDs.ClientDisconnected) {
-				_OnClientDisconnected.Invoke(this, data.senderID);
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(data.senderID, Enums.DisconnectType.Success));
+			}
+			if (data.dataType == typeof(SocketException)) {
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(data.senderID, Enums.DisconnectType.Interrupted));
 			}
 		}
 
@@ -36,17 +38,10 @@ namespace Igor.TCP {
 			if (listeningForData) {
 				SendDataImmediate(DataIDs.ClientDisconnected, new byte[] { clientID });
 				sendingData = false;
-				_OnClientDisconnected.Invoke(this, clientID);
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(clientID, Enums.DisconnectType.Kicked));
 				listeningForData = false;
 				Dispose();
 			}
-		}
-
-		/// <summary>
-		/// Enqueue data to be rerouted to the sender queue, will retain original sender ID
-		/// </summary>
-		internal void _SendDataRerouted(byte universalID, byte originID, byte[] data) {
-			EnquqeAndSend(new SendQueueItem(universalID, originID, data, true)); //??
 		}
 	}
 }

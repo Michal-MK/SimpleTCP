@@ -175,11 +175,6 @@ namespace Igor.TCP {
 			}
 		}
 
-		internal void EnquqeAndSend(SendQueueItem item) {
-			queuedData.Enqueue(item);
-			evnt.Set();
-		}
-
 		private void SendData(SendQueueItem item) {
 			byte[] packetSize = BitConverter.GetBytes(item.rawData.LongLength);
 			byte[] merged = new byte[item.rawData.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY + packetSize.Length];
@@ -249,6 +244,9 @@ namespace Igor.TCP {
 				}
 				else if (data.dataID == DataIDs.RequestReceptionID) {
 					continue;
+				}
+				else if (data.dataType == typeof(SocketException)) {
+					HigherLevelDataReceived(data);
 				}
 				else {
 					HigherLevelDataReceived(data);

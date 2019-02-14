@@ -7,8 +7,6 @@ namespace Igor.TCP {
 
 	public partial class MultipleClientsPerServer {
 
-		private ManualResetEventSlim evnt = new ManualResetEventSlim();
-
 		[TestMethod]
 		public async Task DisconnectingMultipleClients() {
 
@@ -27,14 +25,11 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 
 			client1.Disconnect();
-			Task.Run(Continue);
-			evnt.Wait();
-			await server.Stop();
-		}
+			await Task.Delay(400);
+			client2.Disconnect();
 
-		private async Task Continue() {
-			await Task.Delay(8000);
-			evnt.Set();
+			await Task.Delay(200);
+			await server.Stop();
 		}
 	}
 }
