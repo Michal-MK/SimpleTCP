@@ -33,14 +33,13 @@ namespace Igor.TCP {
 
 			await server.Start(4245);
 
-			client.Connect();
-
-			client.DefineCustomPacket<TestStruct>(55, OnSt_C);
-			client.DefineCustomPacket<MyClass>(56, OnNd_C);
-			client.DefineCustomPacket<C2>(57, OnRd_C);
-			client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
-			client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
-
+			client.Connect(() => {
+				client.DefineCustomPacket<TestStruct>(55, OnSt_C);
+				client.DefineCustomPacket<MyClass>(56, OnNd_C);
+				client.DefineCustomPacket<C2>(57, OnRd_C);
+				client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
+				client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
+			});
 
 
 			server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);

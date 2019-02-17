@@ -38,14 +38,15 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
+			const byte PACKET_ID = 4;
 
-			client.Connect();
+			client.Connect(() => {
+				client.ProvideValue(PACKET_ID, AlsoGet);
+			});
 
 			await Task.Delay(200);
 
-			const byte PACKET_ID = 4;
 			server.ProvideValue(1, PACKET_ID, Get);
-			client.ProvideValue(PACKET_ID, AlsoGet);
 
 			SameTest.TestDataStruct resp = await server.GetValue<SameTest.TestDataStruct>(1, PACKET_ID);
 

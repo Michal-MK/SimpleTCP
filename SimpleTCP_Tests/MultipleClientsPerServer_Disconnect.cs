@@ -19,8 +19,8 @@ namespace Igor.TCP {
 
 			await server.Start(55550);
 
-			client1.Connect();
-			client2.Connect();
+			client1.Connect(null);
+			client2.Connect(null);
 
 			await Task.Delay(100);
 

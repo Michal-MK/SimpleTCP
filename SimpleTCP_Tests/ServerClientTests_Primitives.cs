@@ -21,15 +21,15 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
-			client.Connect();
+			client.Connect(() => {
+				client.getConnection.OnStringReceived += GetConnection_OnStringReceived;
+				client.getConnection.OnInt64Received += GetConnection_OnInt64Received;
+			});
 
 			await Task.Delay(100);;
 
 			server.GetConnection(1).OnStringReceived += ServerClientTests_OnStringReceived;
 			server.GetConnection(1).OnInt64Received += ServerClientTests_OnInt64Received;
-
-			client.getConnection.OnStringReceived += GetConnection_OnStringReceived;
-			client.getConnection.OnInt64Received += GetConnection_OnInt64Received;
 
 			server.GetConnection(1).SendData(SERVER_STRING);
 			server.GetConnection(1).SendData(SERVER_LONG);
