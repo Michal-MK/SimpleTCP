@@ -12,7 +12,7 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
-			client.Connect();
+			client.Connect(null);
 
 			await Task.Delay(100);;
 			client.Disconnect();
@@ -20,7 +20,7 @@ namespace Igor.TCP {
 			await Task.Delay(100);;
 			Assert.IsTrue(client.getConnection == null);
 
-			client.Connect();
+			client.Connect(null);
 
 			await Task.Delay(100);;
 			Assert.IsTrue(client.clientInfo.clientID == 1);

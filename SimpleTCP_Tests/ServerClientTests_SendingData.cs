@@ -14,15 +14,17 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
+			const byte PACKET_ID = 4;
 
-			client.Connect();
+			client.Connect(() => {
+				client.DefineCustomPacket(PACKET_ID, (byte sender, byte value) => {
+					Assert.IsTrue(value == sentByte);
+				});
+			});
 
 			await Task.Delay(100);
 
-			const byte PACKET_ID = 4;
 			server.DefineCustomPacket(1, PACKET_ID, (byte sender, byte value) => 
-			{ Assert.IsTrue(value == sentByte); });
-			client.DefineCustomPacket(PACKET_ID, (byte sender, byte value) => 
 			{ Assert.IsTrue(value == sentByte); });
 
 			client.getConnection.SendData(PACKET_ID, sentByte);

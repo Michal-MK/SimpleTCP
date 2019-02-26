@@ -70,7 +70,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Connect to server with specified IP and port
 		/// </summary>
-		public void Connect() {
+		public void Connect(Action OnConnected) {
 			TcpClient clientBase = new TcpClient();
 			clientBase.Connect(address, port);
 			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
@@ -89,6 +89,7 @@ namespace Igor.TCP {
 			if (debugPrints) {
 				Console.WriteLine("Connection Established");
 			}
+			OnConnected?.Invoke();
 		}
 
 

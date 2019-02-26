@@ -245,6 +245,9 @@ namespace Igor.TCP {
 				else if (data.dataID == DataIDs.RequestReceptionID) {
 					continue;
 				}
+				else if (data.dataType == typeof(SocketException)) {
+					HigherLevelDataReceived(data);
+				}
 				else {
 					HigherLevelDataReceived(data);
 				}

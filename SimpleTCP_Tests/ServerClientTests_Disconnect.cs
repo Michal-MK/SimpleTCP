@@ -14,7 +14,7 @@ namespace Igor.TCP {
 			server.OnClientDisconnected += Server_OnClientDisconnected;
 
 			await server.Start(55550);
-			client.Connect();
+			client.Connect(null);
 
 			await Task.Delay(100);
 

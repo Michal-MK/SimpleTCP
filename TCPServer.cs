@@ -253,9 +253,9 @@ namespace Igor.TCP {
 
 		#region Private Events
 
-		private void ClientDisconnected(object sender, byte e) {
-			OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(e));
-			connectedClients.Remove(e);
+		private void ClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
+			OnClientDisconnected?.Invoke(this, e);
+			connectedClients.Remove(e.clientID);
 		}
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {

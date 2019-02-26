@@ -11,14 +11,16 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 5656);
 
 			await server.Start(5656);
-			client.Connect();
+			const byte PACKET_ID = 4;
+
+			client.Connect(() => {
+				client.ProvideValue(PACKET_ID, ClientString);
+			});
 
 			await Task.Delay(100);
 
-			const byte PACKET_ID = 4;
 
 			server.ProvideValue(1, PACKET_ID, ServerString);
-			client.ProvideValue(PACKET_ID, ClientString);
 
 			string resp = await server.GetValue<string>(1, PACKET_ID);
 
