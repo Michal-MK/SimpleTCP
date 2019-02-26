@@ -91,18 +91,19 @@ namespace Igor.TCP {
 					byte requestID = data[0];
 
 					if (!responseFunctionMap.ContainsKey(requestID)) {
-						throw new NotImplementedException($"Server is requesting response for '{requestID}' byteID, but no such ID is defined!");
-					}
-
-					TCPRequest request = new TCPRequest(requestID);
-
-					object obj = responseFunctionMap[request.packetID].DynamicInvoke(null);
-
-					if (obj is byte[]) {
-						responseManager.HandleRequest(request, obj as byte[]);
+						responseManager.HandleRequest(new TCPRequest(requestID),
+							$"A request was made under {requestID} {(_connection.myInfo.isServer ? "Server" : "Client")} (ID:{_connection.myInfo.clientID} can not respond!)");
 					}
 					else {
-						responseManager.HandleRequest(request, obj);
+						TCPRequest request = new TCPRequest(requestID);
+						object obj = responseFunctionMap[request.packetID].DynamicInvoke(null);
+
+						if (obj is byte[] array) {
+							responseManager.HandleRequest(request, array);
+						}
+						else {
+							responseManager.HandleRequest(request, obj);
+						}
 					}
 					return typeof(TCPRequest);
 				}
@@ -111,10 +112,10 @@ namespace Igor.TCP {
 				}
 				case PropertySyncID: {
 					byte[] realData = new byte[data.Length - 1];
-					//Efficient unsafe way to get array without copying
+					byte dataID = data[0];
 					Array.Copy(data, 1, realData, 0, realData.Length);
-					syncedProperties[data[0]].property.SetValue(syncedProperties[data[0]].classInstance,
-						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
+					syncedProperties[dataID].property.SetValue(syncedProperties[dataID].classInstance,
+						SimpleTCPHelper.GetObject(syncedProperties[dataID].propertyType, realData));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case ClientDisconnected: {
@@ -191,7 +192,7 @@ namespace Igor.TCP {
 			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<byte, object>((b, o) => { callback(b, (TData)o); })));
 		}
 
-		internal void RemoveCustoMPacket(byte ID) {
+		internal void RemoveCustomPacket(byte ID) {
 			customIDs.Remove(ID);
 		}
 
@@ -200,8 +201,9 @@ namespace Igor.TCP {
 				rerouter.rerouteDefinitions.Add(info.packetID, new List<ReroutingInfo>() { info });
 			}
 			else {
-				if (rerouter.rerouteDefinitions[info.packetID].Find((p) => { return p.toClient == info.toClient && p.packetID == info.packetID; }) != null) {
+				if (rerouter.rerouteDefinitions[info.packetID].Find((p) => { return p.toClient == info.toClient && p.packetID == info.packetID; }) == null) {
 					rerouter.rerouteDefinitions[info.packetID].Add(info);
+					return;
 				}
 				throw new PacketIDTakenException(info.packetID, null, "Attempted to add a rerouting definition, but such definition already exists!");
 			}

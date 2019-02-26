@@ -14,7 +14,7 @@ namespace Igor.TCP {
 		public void ClientStart() {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55555);
 
-			Assert.IsTrue(client.clientInfo.clientID == 255);
+			Assert.ThrowsException<InvalidOperationException>(() => client.clientInfo.clientID == 255);
 			Assert.IsTrue(client.clientInfo.computerName == Environment.UserName);
 			Assert.IsNull(client.getConnection);
 		}
@@ -60,7 +60,6 @@ namespace Igor.TCP {
 			await Task.Delay(500);
 
 			Assert.IsTrue(matches == 5);
-
 		}
 
 		private void OnSt_C(byte sender, TestStruct arg1) {

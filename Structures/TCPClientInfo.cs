@@ -15,7 +15,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Address of current instance
 		/// </summary>
-		public IPAddress clientAddress { get; }
+		public string clientAddress { get; }
 
 		/// <summary>
 		/// The name of connected client, if not set up users computer name is used.
@@ -23,16 +23,30 @@ namespace Igor.TCP {
 		public string computerName { get; }
 
 		/// <summary>
-		/// The ID assigned from server<para>Value 255 is invalid/not yet assigned!</para> 
+		/// The ID assigned from server
 		/// </summary>
-		public byte clientID { get; internal set; } = 255;
+		/// <exception cref="InvalidOperationException"></exception>
+		public byte clientID {
+			get {
+				if (isValid) {
+					return _clientID;
+				}
+				throw new InvalidOperationException("Client has not been given an ID yet");
+			}
+			internal set {
+				_clientID = value;
+				isValid = true;
+			}
+		}
+		private byte _clientID = 255;
 
+		internal bool isValid { get; set; } = false;
 		/// <summary>
 		/// Initialize new <see cref="TCPClientInfo"/>
 		/// </summary>
 		public TCPClientInfo(string computerName, bool isServer, IPAddress clientAddress) {
 			this.isServer = isServer;
-			this.clientAddress = clientAddress;
+			this.clientAddress = clientAddress.ToString();
 			this.computerName = computerName;
 		}
 	}

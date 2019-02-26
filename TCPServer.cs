@@ -137,7 +137,7 @@ namespace Igor.TCP {
 		#region Getting connections to the server
 
 		/// <summary>
-		/// Get client connection by ID, NPE if client id is not found/connected
+		/// Get client connection by 'ID'
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(byte id) {
@@ -156,7 +156,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.infoAboutOtherSide.clientAddress == address) {
+				if (IPAddress.Parse(item.Value.infoAboutOtherSide.clientAddress) == address) {
 					return item.Value;
 				}
 			}
@@ -237,7 +237,7 @@ namespace Igor.TCP {
 
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
 				TCPClientInfo connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
-				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address()) {
+				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, currentAddress) {
 					clientID = 0
 				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
@@ -272,7 +272,7 @@ namespace Igor.TCP {
 		#region Property Synchronization
 
 		/// <summary>
-		/// Define 'propID' for synchronization of public property for client 'clientID' named 'propetyName' from instance of a class 'instance', publish changes by calling UpdateProp()
+		/// Define 'propertySyncPacketID' for synchronization of public property for client 'clientID' named 'propetyName' from instance of a class 'instance', publish changes by calling UpdateProp()
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
 		public void SyncProperty(byte clientID, object instance, string propertyName, byte propertySyncPacketID) {
@@ -304,18 +304,6 @@ namespace Igor.TCP {
 		#region Communication Definitions
 
 		/// <summary>
-		/// Provide a value to all connected clients
-		/// </summary>
-		public void ProvideValue<T>(byte packetID, Func<T> function) {
-			foreach (TCPClientInfo info in getConnectedClients) {
-				if (connectedClients[info.clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
-					throw new PacketIDTakenException(packetID, dataType, message);
-				}
-			}
-			(this as IValueProvider).providedValues.Add(packetID, function);
-		}
-
-		/// <summary>
 		/// Provide a value to a selected client
 		/// </summary>
 		public void ProvideValue<T>(byte clientID, byte packetID, Func<T> function) {
@@ -330,12 +318,12 @@ namespace Igor.TCP {
 		/// Request a value from a client
 		/// </summary>
 		public async Task<T> GetValue<T>(byte clientID, byte packetID) {
-			TCPResponse resp = await GetConnection(clientID).requestCreator.Request(packetID);
+			TCPResponse resp = await GetConnection(clientID).requestCreator.Request(packetID, typeof(T));
 			return (T)resp.getObject;
 		}
 
 		/// <summary>
-		/// Define rerouting of all packets from 'fromClient' coming to this server to under 'packetID' to be sent to 'toClient'
+		/// Define rerouting of all packets from 'fromClient' coming to this server identified as 'packetID', to be sent to 'toClient'
 		/// </summary>
 		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID) {
 			ReroutingInfo info = new ReroutingInfo(toClient, packetID);
@@ -357,7 +345,7 @@ namespace Igor.TCP {
 		#region Send To All custom data, string, and long
 
 		/// <summary>
-		/// Send 'data' to all connected clients.
+		/// Send custom data to all connected clients.
 		/// </summary>
 		/// <exception cref="UndefinedPacketException"></exception>
 		/// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
@@ -373,7 +361,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Send string to all connected clients.
+		/// Send <see cref="string"/> to all connected clients.
 		/// </summary>
 		public void SendToAll(string data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
@@ -382,7 +370,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Send Int64 to all connected clients.
+		/// Send <see cref="Int64"/> to all connected clients.
 		/// </summary>
 		public void SendToAll(Int64 data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {

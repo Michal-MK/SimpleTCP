@@ -37,7 +37,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// The type of data this packet carries
 		/// </summary>
-		public Type dataType { get; }
+		public Type dataType { get; internal set; }
 
 		/// <summary>
 		/// Attempts conversion to requested type, will fail if the object's name-space differs between Assemblies!

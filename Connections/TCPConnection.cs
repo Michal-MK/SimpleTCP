@@ -29,12 +29,12 @@ namespace Igor.TCP {
 		public bool debugPrints { get; set; }
 
 		/// <summary>
-		/// Called when successfully received data by <see cref="DataIDs.StringID"></see> marked packet
+		/// Called when successfully received data marked as a <see cref="string"/>
 		/// </summary>
 		public event EventHandler<PacketReceivedEventArgs<string>> OnStringReceived;
 
 		/// <summary>
-		/// Called when successfully received data by <see cref="DataIDs.Int64ID"></see> marked packet
+		/// Called when successfully received data marked as a <see cref="Int64"/>
 		/// </summary>
 		public event EventHandler<PacketReceivedEventArgs<Int64>> OnInt64Received;
 
@@ -299,18 +299,29 @@ namespace Igor.TCP {
 
 			#endregion
 
-			Type dataType = dataIDs.IndetifyID(GetPacketID(packetID), GetSenderID(fromClient), data);
+			var packetIDField = GetPacketID(packetID);
+
+			Type dataType = dataIDs.IndetifyID(packetIDField, GetSenderID(fromClient), data);
 			object dataObject;
 
 			if (dataType == typeof(TCPResponse)) {
-				dataObject = new TCPResponse(data[0], new byte[data.Length - 1], responseGenerator.GetResponseType(data[0]));
+				dataObject = new TCPResponse(data[0], new byte[data.Length - 1], requestCreator.responseObjectType);
 				Array.Copy(data, 1, (dataObject as TCPResponse).rawData, 0, (dataObject as TCPResponse).rawData.Length);
 			}
 			else if (dataType == typeof(ClientDisconnectedPacket)) {
 				dataObject = data[0];
 			}
+			else if (dataType == typeof(TCPRequest)) {
+				dataObject = data[0];
+			}
+			else if (dataType == typeof(OnPropertySynchronizationEventArgs)) {
+				dataObject = data;
+			}
+			else if (packetIDField == DataIDs.StringID || packetIDField == DataIDs.Int64ID) {
+				dataObject = SimpleTCPHelper.GetObject(dataType, data);
+			}
 			else {
-				dataObject = GetObjectFromData(dataType, data);
+				dataObject = SimpleTCPHelper.GetObject(dataIDs.customIDs[GetPacketID(packetID)].dataType, data);
 			}
 
 			return new ReceivedData(dataType, GetSenderID(fromClient), GetPacketID(packetID), dataObject);
@@ -336,10 +347,6 @@ namespace Igor.TCP {
 				throw new Exception();
 			}
 			return packetID[0];
-		}
-
-		private object GetObjectFromData(Type type, byte[] data) {
-			return SimpleTCPHelper.GetObject(type, data);
 		}
 
 		#endregion

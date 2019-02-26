@@ -13,7 +13,11 @@ namespace Igor.TCP {
 			}
 
 			string originalAssemblyName = assemblyName.Split(',')[0];
-			string wantedAssemblyName = currentExecutingAssembly.Split(',')[0];
+			string wantedAssemblyName;
+			if (isSystemType)
+				wantedAssemblyName = originalAssemblyName;
+			else
+				wantedAssemblyName = currentExecutingAssembly.Split(',')[0];
 
 			foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
 				if (assembly.FullName.Split(',')[0] == (isSystemType ? originalAssemblyName : wantedAssemblyName)) {

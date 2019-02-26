@@ -16,7 +16,7 @@ namespace Igor.TCP {
 		public ushort port { get; private set; }
 
 		/// <summary>
-		/// Initialize new ConnectionData, used for connecting to the server
+		/// Initialize new <see cref="ConnectionData"/>, holds information necessary to make a connection
 		/// </summary>
 		public ConnectionData(string ipAddress, ushort port) {
 			this.ipAddress = ipAddress;
