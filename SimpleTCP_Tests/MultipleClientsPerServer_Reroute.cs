@@ -37,7 +37,7 @@ namespace Igor.TCP {
 
 			await Task.Delay(100);
 
-			client1.getConnection.SendData(PACKET, new string[] { "Hello", "World" });
+			client1.Connection.SendData(PACKET, new string[] { "Hello", "World" });
 			server.GetConnection(1).SendData(PACKET, new string[] { "Hello", "World" });
 
 			await Task.Delay(100);

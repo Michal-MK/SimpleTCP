@@ -4,17 +4,17 @@ using System.Net.Sockets;
 namespace Igor.TCP {
 	internal class ConnectionInfo {
 		internal ConnectionInfo(IPAddress connectedAddress, byte connectionID, TcpClient baseClient, TCPConnection connection) {
-			this.baseClient = baseClient;
-			this.connectionID = connectionID;
-			this.connectedAddress = connectedAddress;
-			dataStream = baseClient.GetStream();
-			this.connection = connection;
+			BaseClient = baseClient;
+			ConnectionID = connectionID;
+			ConnectedAddress = connectedAddress;
+			DataStream = baseClient.GetStream();
+			Connection = connection;
 		}
 
-		internal IPAddress connectedAddress { get; }
-		internal byte connectionID { get; }
-		internal TcpClient baseClient { get; }
-		internal NetworkStream dataStream { get; }
-		internal TCPConnection connection { get; }
+		internal IPAddress ConnectedAddress { get; }
+		internal byte ConnectionID { get; }
+		internal TcpClient BaseClient { get; }
+		internal NetworkStream DataStream { get; }
+		internal TCPConnection Connection { get; }
 	}
 }

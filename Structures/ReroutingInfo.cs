@@ -5,18 +5,18 @@
 	/// </summary>
 	internal class ReroutingInfo {
 		internal ReroutingInfo(byte toClient, byte packetID) {
-			this.toClient = toClient;
-			this.packetID = packetID;
+			ToClient = toClient;
+			PacketID = packetID;
 		}
 
 		/// <summary>
 		/// ID this packet is meant for
 		/// </summary>
-		internal byte toClient;
+		internal byte ToClient { get; }
 
 		/// <summary>
 		/// ID of the packet
 		/// </summary>
-		internal byte packetID;
+		internal byte PacketID { get; }
 	}
 }

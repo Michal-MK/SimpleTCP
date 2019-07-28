@@ -12,22 +12,17 @@ namespace Igor.TCP {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
-		Dictionary<byte, Delegate> IValueProvider.providedValues { get; } = new Dictionary<byte, Delegate>();
+		Dictionary<byte, Delegate> IValueProvider.ProvidedValues { get; } = new Dictionary<byte, Delegate>();
 
 		/// <summary>
 		/// Information about this client
 		/// </summary>
-		public TCPClientInfo clientInfo { get; set; }
+		public TCPClientInfo ClientInfo { get; set; }
 
 		/// <summary>
 		/// Get connection to the server, allows client to server communication, holds send and receive functionality
 		/// </summary>
-		public ClientToServerConnection getConnection { get; private set; }
-
-		/// <summary>
-		/// Log debug information into the console
-		/// </summary>
-		public bool debugPrints { get; set; } = false;
+		public ClientToServerConnection Connection { get; private set; }
 
 		/// <summary>
 		/// Event called whenever a synchronization packet is received
@@ -55,16 +50,16 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(ConnectionData data) {
-			this.port = data.port;
-			if (IPAddress.TryParse(data.ipAddress, out address)) {
-				if (debugPrints) {
-					Console.WriteLine("IP parsed successfully");
-				}
+			port = data.Port;
+			if (IPAddress.TryParse(data.IPAddress, out address)) {
+#if DEBUG
+				Console.WriteLine("IP parsed successfully");
+#endif
 			}
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
-			clientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address());
+			ClientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address());
 		}
 
 		/// <summary>
@@ -76,19 +71,19 @@ namespace Igor.TCP {
 			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 			NetworkStream stream = clientBase.GetStream();
 			stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-			clientInfo.clientID = buffer[0];
+			ClientInfo.ClientID = buffer[0];
 
-			byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(clientInfo);
+			byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(ClientInfo);
 
 			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
 
 			TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address) {
-				clientID = 0
+				ClientID = 0
 			};
-			getConnection = new ClientToServerConnection(clientBase, clientInfo, serverInfo, this);
-			if (debugPrints) {
-				Console.WriteLine("Connection Established");
-			}
+			Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+#if DEBUG
+			Console.WriteLine("Connection Established");
+#endif
 			OnConnected?.Invoke();
 		}
 
@@ -98,23 +93,23 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
 		public TCPClientInfo SetUpClientInfo(string clientName) {
-			clientInfo = new TCPClientInfo(clientName, false, address);
-			return clientInfo;
+			ClientInfo = new TCPClientInfo(clientName, false, address);
+			return ClientInfo;
 		}
 
 
 		/// <summary>
 		/// Set listening for incoming data from connected client 'clientID'
 		/// </summary>
-		public bool isListeningForData {
-			get { return getConnection.listeningForData; }
+		public bool IsListeningForData {
+			get { return Connection.ListeningForData; }
 			set {
-				if(getConnection.listeningForData == value) {
+				if (Connection.ListeningForData == value) {
 					return;
 				}
-				getConnection.listeningForData = value;
+				Connection.ListeningForData = value;
 				if (value) {
-					getConnection.DataReception();
+					Connection.DataReception();
 				}
 			}
 		}
@@ -123,7 +118,7 @@ namespace Igor.TCP {
 		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
 		public void SyncProperty(object instance, string propertyName, byte propertyPacketID) {
-			getConnection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));
+			Connection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));
 		}
 
 		#region Communication Definitions
@@ -132,17 +127,17 @@ namespace Igor.TCP {
 		/// Provide a value to all connected clients
 		/// </summary>
 		public void ProvideValue<T>(byte packetID, Func<T> function) {
-			(this as IValueProvider).providedValues.Add(packetID, function);
-			getConnection.dataIDs.responseFunctionMap.Add(packetID, function);
-			getConnection.dataIDs.requestTypeMap.Add(packetID, typeof(T));
+			(this as IValueProvider).ProvidedValues.Add(packetID, function);
+			Connection.dataIDs.responseFunctionMap.Add(packetID, function);
+			Connection.dataIDs.requestTypeMap.Add(packetID, typeof(T));
 		}
 
 		/// <summary>
 		/// Request a value from a client
 		/// </summary>
 		public async Task<T> GetValue<T>(byte packetID) {
-			TCPResponse resp = await getConnection.requestCreator.Request(packetID);
-			return (T)resp.getObject;
+			TCPResponse resp = await Connection.requestCreator.Request(packetID);
+			return (T)resp.GetObject;
 		}
 
 		/// <summary>
@@ -152,7 +147,7 @@ namespace Igor.TCP {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
-			getConnection.dataIDs.DefineCustomPacket(packetID, callback);
+			Connection.dataIDs.DefineCustomPacket(packetID, callback);
 		}
 
 		#endregion
@@ -162,9 +157,9 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
 		public void Disconnect() {
-			if (getConnection != null) {
-				getConnection.DisconnectFromServer(clientInfo.clientID);
-				getConnection = null;
+			if (Connection != null) {
+				Connection.DisconnectFromServer(ClientInfo.ClientID);
+				Connection = null;
 			}
 			else {
 				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything...");

@@ -4,9 +4,9 @@ namespace Igor.TCP {
 	[Serializable]
 	internal class TCPRequest {
 		internal TCPRequest(byte packetID) {
-			this.packetID = packetID;
+			PacketID = packetID;
 		}
 
-		internal byte packetID { get; set; }
+		internal byte PacketID { get; set; }
 	}
 }

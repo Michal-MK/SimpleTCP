@@ -20,26 +20,26 @@ namespace Igor.TCP {
 		/// Handle higher level data that only server can receive and react to
 		/// </summary>
 		protected override void HigherLevelDataReceived(ReceivedData data) {
-			if (data.dataType == typeof(TCPClient)) {
-				DisconnectClient(data.senderID);
+			if (data.DataType == typeof(TCPClient)) {
+				DisconnectClient(data.SenderID);
 			}
-			if (data.dataID == DataIDs.ClientDisconnected) {
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(data.senderID, Enums.DisconnectType.Success));
+			if (data.DataID == DataIDs.ClientDisconnected) {
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Success));
 			}
-			if (data.dataType == typeof(SocketException)) {
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(data.senderID, Enums.DisconnectType.Interrupted));
+			if (data.DataType == typeof(SocketException)) {
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
 			}
 		}
 
 		/// <summary>
-		/// Send a disconnect packet to the client and stop all communication to said client
+		/// Send a disconnect packet to the client and stop all communication with said client
 		/// </summary>
 		public void DisconnectClient(byte clientID) {
-			if (listeningForData) {
+			if (ListeningForData) {
 				SendDataImmediate(DataIDs.ClientDisconnected, new byte[] { clientID });
-				sendingData = false;
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(clientID, Enums.DisconnectType.Kicked));
-				listeningForData = false;
+				SendingData = false;
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));
+				ListeningForData = false;
 				Dispose();
 			}
 		}

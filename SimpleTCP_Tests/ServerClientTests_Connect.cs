@@ -22,17 +22,17 @@ namespace Igor.TCP {
 
 			Assert.IsTrue(clientConnectedEventFired);
 			Assert.IsTrue(server.getConnectedClients.Length == 1);
-			Assert.IsNotNull(client.getConnection);
+			Assert.IsNotNull(client.Connection);
 
-			Assert.IsTrue(server.getConnectedClients[0].isServer == false);
+			Assert.IsTrue(server.getConnectedClients[0].IsServer == false);
 
-			Assert.IsTrue(Equals(server.getConnectedClients[0].clientAddress, SimpleTCPHelper.GetActiveIPv4Address()));
-			Assert.IsTrue(server.getConnectedClients[0].computerName == Environment.UserName);
-			Assert.IsTrue(server.getConnectedClients[0].clientID == 1);
+			Assert.IsTrue(Equals(server.getConnectedClients[0].Address, SimpleTCPHelper.GetActiveIPv4Address()));
+			Assert.IsTrue(server.getConnectedClients[0].Name == Environment.UserName);
+			Assert.IsTrue(server.getConnectedClients[0].ClientID == 1);
 
-			Assert.IsTrue(client.getConnection.listeningForData);
-			Assert.IsTrue(client.getConnection.sendingData);
-			Assert.IsTrue(client.clientInfo.clientID == 1);
+			Assert.IsTrue(client.Connection.ListeningForData);
+			Assert.IsTrue(client.Connection.SendingData);
+			Assert.IsTrue(client.ClientInfo.ClientID == 1);
 
 			await server.Stop();
 		}

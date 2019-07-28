@@ -19,10 +19,10 @@ namespace Igor.TCP {
 
 		internal void HandleRequest(TCPRequest request, byte[] data_ready) {
 			byte[] data = new byte[data_ready.Length + DataIDs.PACKET_ID_COMPLEXITY];
-			data[0] = request.packetID;
+			data[0] = request.PacketID;
 			data_ready.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
 
-			connection.SendData(DataIDs.ResponseReceptionID, connection.myInfo.clientID, data);
+			connection.SendData(DataIDs.ResponseReceptionID, connection.myInfo.ClientID, data);
 		}
 
 		/// <summary>

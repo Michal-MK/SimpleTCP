@@ -14,9 +14,9 @@ namespace Igor.TCP {
 		public void ClientStart() {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55555);
 
-			Assert.IsTrue(client.clientInfo.clientID == 255);
-			Assert.IsTrue(client.clientInfo.computerName == Environment.UserName);
-			Assert.IsNull(client.getConnection);
+			Assert.IsTrue(client.ClientInfo.ClientID == 255);
+			Assert.IsTrue(client.ClientInfo.Name == Environment.UserName);
+			Assert.IsNull(client.Connection);
 		}
 
 		#endregion

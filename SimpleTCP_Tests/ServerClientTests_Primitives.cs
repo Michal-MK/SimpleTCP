@@ -22,8 +22,8 @@ namespace Igor.TCP {
 
 			await server.Start(55550);
 			client.Connect(() => {
-				client.getConnection.OnStringReceived += GetConnection_OnStringReceived;
-				client.getConnection.OnInt64Received += GetConnection_OnInt64Received;
+				client.Connection.OnStringReceived += GetConnection_OnStringReceived;
+				client.Connection.OnInt64Received += GetConnection_OnInt64Received;
 			});
 
 			await Task.Delay(100);;
@@ -34,8 +34,8 @@ namespace Igor.TCP {
 			server.GetConnection(1).SendData(SERVER_STRING);
 			server.GetConnection(1).SendData(SERVER_LONG);
 
-			client.getConnection.SendData(CLIENT_STRING);
-			client.getConnection.SendData(CLIENT_LONG);
+			client.Connection.SendData(CLIENT_STRING);
+			client.Connection.SendData(CLIENT_LONG);
 
 			await Task.Delay(100);;
 			Assert.IsTrue(eventsPassed == 4);

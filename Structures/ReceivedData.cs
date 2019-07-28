@@ -10,28 +10,28 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Data type of this data object
 		/// </summary>
-		internal Type dataType { get; }
+		internal Type DataType { get; }
 
 		/// <summary>
 		/// ID of the endpoint this packet originated from
 		/// </summary>
-		internal byte senderID { get; }
+		internal byte SenderID { get; }
 
 		/// <summary>
 		/// ID of the data
 		/// </summary>
-		internal byte dataID { get; }
+		internal byte DataID { get; }
 
 		/// <summary>
-		/// Received bytes converted into a generic object. Casting to <see cref="dataType"/> is valid.
+		/// Received bytes converted into a generic object. Casting to <see cref="DataType"/> is valid.
 		/// </summary>
-		internal object receivedObject { get; }
+		internal object ReceivedObject { get; }
 
 		internal ReceivedData(Type dataType, byte senderID, byte dataID, object receivedObject) {
-			this.dataType = dataType;
-			this.senderID = senderID;
-			this.dataID = dataID;
-			this.receivedObject = receivedObject;
+			DataType = dataType;
+			SenderID = senderID;
+			DataID = dataID;
+			this.ReceivedObject = receivedObject;
 		}
 	}
 }

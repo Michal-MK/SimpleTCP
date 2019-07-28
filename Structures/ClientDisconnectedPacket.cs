@@ -27,15 +27,15 @@ namespace Igor.TCP {
 	internal struct ClientDisconnectedPacket {
 
 		internal ClientDisconnectedPacket(byte sender, byte disconnectedClientID, DisconnectType disconnectType) {
-			this.sender = sender;
-			this.disconnectedClientID = disconnectedClientID;
-			this.disconnectType = disconnectType;
+			Sender = sender;
+			DisconnectedClientID = disconnectedClientID;
+			DisconnectType = disconnectType;
 		}
 
-		public byte sender { get; }
+		public byte Sender { get; }
 
-		public byte disconnectedClientID { get; }
+		public byte DisconnectedClientID { get; }
 
-		public DisconnectType disconnectType { get; }
+		public DisconnectType DisconnectType { get; }
 	}
 }

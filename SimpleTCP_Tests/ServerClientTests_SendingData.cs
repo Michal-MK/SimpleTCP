@@ -27,7 +27,7 @@ namespace Igor.TCP {
 			server.DefineCustomPacket(1, PACKET_ID, (byte sender, byte value) => 
 			{ Assert.IsTrue(value == sentByte); });
 
-			client.getConnection.SendData(PACKET_ID, sentByte);
+			client.Connection.SendData(PACKET_ID, sentByte);
 
 			server.GetConnection(1).SendData(PACKET_ID,sentByte);
 

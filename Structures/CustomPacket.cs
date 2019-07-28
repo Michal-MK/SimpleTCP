@@ -9,25 +9,25 @@ namespace Igor.TCP {
 		/// <summary>
 		/// The ID of the packet
 		/// </summary>
-		internal byte packetID { get; }
+		internal byte PacketID { get; }
 
 		/// <summary>
 		/// Type of the data this packet carries
 		/// </summary>
-		internal Type dataType { get; }
+		internal Type DataType { get; }
 
 		/// <summary>
 		/// Callback action to receive the selected object
 		/// </summary>
-		internal Action<byte, object> action { get; }
+		internal Action<byte, object> ActionCallback { get; }
 
 		/// <summary>
 		/// Default Constructor
 		/// </summary>
 		internal CustomPacket(byte packetID, Type dataType, Action<byte, object> action) {
-			this.packetID = packetID;
-			this.dataType = dataType;
-			this.action = action;
+			PacketID = packetID;
+			DataType = dataType;
+			ActionCallback = action;
 		}
 	}
 }

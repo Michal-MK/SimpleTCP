@@ -23,7 +23,7 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 			Assert.IsTrue(server.getConnectedClients.Length == 0);
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(1); });
-			Assert.IsNull(client.getConnection);
+			Assert.IsNull(client.Connection);
 			Assert.IsTrue(disconnectEvent);
 
 			await server.Stop();

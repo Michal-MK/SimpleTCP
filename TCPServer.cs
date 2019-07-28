@@ -24,8 +24,8 @@ namespace Igor.TCP {
 
 		private ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
 
-		Dictionary<byte, Delegate> IValueProvider.providedValues { get; } = new Dictionary<byte, Delegate>();
-		Dictionary<byte, List<ReroutingInfo>> IRerouteCapable.rerouteDefinitions { get; } = new Dictionary<byte, List<ReroutingInfo>>();
+		Dictionary<byte, Delegate> IValueProvider.ProvidedValues { get; } = new Dictionary<byte, Delegate>();
+		Dictionary<byte, List<ReroutingInfo>> IRerouteCapable.RerouteDefinitions { get; } = new Dictionary<byte, List<ReroutingInfo>>();
 
 
 		/// <summary>
@@ -36,7 +36,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Configuration of this server
 		/// </summary>
-		public ServerConfiguration serverConfiguration { get; }
+		public ServerConfiguration ServerConfiguration { get; }
 
 		/// <summary>
 		/// Called when client connects to this server
@@ -63,7 +63,7 @@ namespace Igor.TCP {
 		/// Create new <see cref="TCPServer"/>
 		/// </summary>
 		public TCPServer(ServerConfiguration configuration) {
-			serverConfiguration = configuration;
+			ServerConfiguration = configuration;
 		}
 
 		#region Start/Stop Server
@@ -127,7 +127,7 @@ namespace Igor.TCP {
 				listenForClientConnections = false;
 				clientConnectionListener.Stop();
 				foreach (ServerToClientConnection connection in connectedClients.Values.ToArray()) {
-					connection.DisconnectClient(connection.infoAboutOtherSide.clientID);
+					connection.DisconnectClient(connection.infoAboutOtherSide.ClientID);
 				}
 			});
 		}
@@ -156,7 +156,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.infoAboutOtherSide.clientAddress == address) {
+				if (item.Value.infoAboutOtherSide.Address == address) {
 					return item.Value;
 				}
 			}
@@ -190,7 +190,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void SetListeningForData(byte clientID, bool state) {
 			if (connectedClients.ContainsKey(clientID)) {
-				connectedClients[clientID].listeningForData = state;
+				connectedClients[clientID].ListeningForData = state;
 				connectedClients[clientID].DataReception();
 				return;
 			}
@@ -238,7 +238,7 @@ namespace Igor.TCP {
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
 				TCPClientInfo connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
 				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address()) {
-					clientID = 0
+					ClientID = 0
 				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
 				conn.dataIDs.rerouter = this;
@@ -255,7 +255,7 @@ namespace Igor.TCP {
 
 		private void ClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
 			OnClientDisconnected?.Invoke(this, e);
-			connectedClients.Remove(e.clientID);
+			connectedClients.Remove(e.ClientInfo.ClientID);
 		}
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {
@@ -308,11 +308,11 @@ namespace Igor.TCP {
 		/// </summary>
 		public void ProvideValue<T>(byte packetID, Func<T> function) {
 			foreach (TCPClientInfo info in getConnectedClients) {
-				if (connectedClients[info.clientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+				if (connectedClients[info.ClientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
 					throw new PacketIDTakenException(packetID, dataType, message);
 				}
 			}
-			(this as IValueProvider).providedValues.Add(packetID, function);
+			(this as IValueProvider).ProvidedValues.Add(packetID, function);
 		}
 
 		/// <summary>
@@ -331,7 +331,7 @@ namespace Igor.TCP {
 		/// </summary>
 		public async Task<T> GetValue<T>(byte clientID, byte packetID) {
 			TCPResponse resp = await GetConnection(clientID).requestCreator.Request(packetID);
-			return (T)resp.getObject;
+			return (T)resp.GetObject;
 		}
 
 		/// <summary>
@@ -364,7 +364,7 @@ namespace Igor.TCP {
 		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
 				if (info.dataIDs.customIDs.ContainsKey(packetID)) {
-					info.SendData(packetID, 0, SimpleTCPHelper.GetBytesFromObject(data));
+					info.SendData(packetID, info.infoAboutOtherSide.ClientID, SimpleTCPHelper.GetBytesFromObject(data));
 				}
 				else {
 					throw new UndefinedPacketException("Packet is not defined!", packetID, typeof(TData));

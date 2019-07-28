@@ -15,7 +15,7 @@ namespace Igor.TCP {
 		public async Task ServerStart() {
 			TCPServer server = new TCPServer(new ServerConfiguration(true));
 			server.OnServerStarted += Server_OnServerStarted;
-			Assert.IsTrue(server.serverConfiguration.clientCanRequestFromServer);
+			Assert.IsTrue(server.ServerConfiguration.ClientCanRequestFromServer);
 
 			await server.Start(65000);
 

@@ -7,25 +7,25 @@
 		/// <summary>
 		/// The ID to send this packet to
 		/// </summary>
-		internal byte packetID;
+		internal byte PacketID { get; }
 
 		/// <summary>
 		/// The original sender of the packet
 		/// </summary>
-		internal byte originClientID;
+		internal byte OriginClientID { get; }
 
 		/// <summary>
 		/// The actual data to send
 		/// </summary>
-		internal byte[] rawData;
+		internal byte[] RawData { get; }
 
 		/// <summary>
 		/// Default constructor
 		/// </summary>
 		internal SendQueueItem(byte packetID, byte originClientID, byte[] rawData) {
-			this.packetID = packetID;
-			this.originClientID = originClientID;
-			this.rawData = rawData;
+			PacketID = packetID;
+			OriginClientID = originClientID;
+			RawData = rawData;
 		}
 	}
 }

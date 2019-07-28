@@ -9,18 +9,18 @@ namespace Igor.TCP {
 		/// <summary>
 		/// IP address to connect to
 		/// </summary>
-		public string ipAddress { get; private set; }
+		public string IPAddress { get; private set; }
 		/// <summary>
 		/// Port to which to listen
 		/// </summary>
-		public ushort port { get; private set; }
+		public ushort Port { get; private set; }
 
 		/// <summary>
 		/// Initialize new ConnectionData, used for connecting to the server
 		/// </summary>
 		public ConnectionData(string ipAddress, ushort port) {
-			this.ipAddress = ipAddress;
-			this.port = port;
+			IPAddress = ipAddress;
+			Port = port;
 		}
 	}
 }

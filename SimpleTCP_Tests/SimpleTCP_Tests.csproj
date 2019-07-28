@@ -63,6 +63,7 @@
     <Compile Include="ServerClientTests_CustomStructurePacket.cs" />
     <Compile Include="ServerClientTests_Requests.cs" />
     <Compile Include="ServerTests.cs" />
+    <Compile Include="FreeTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

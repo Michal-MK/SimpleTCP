@@ -11,18 +11,18 @@ namespace Igor.TCP {
 	public class ClientConnectedEventArgs : EventArgs {
 
 		internal ClientConnectedEventArgs(TCPServer myServer, TCPClientInfo clientInfo) {
-			this.myServer = myServer;
-			this.clientInfo = clientInfo;
+			this.Server = myServer;
+			this.ClientInfo = clientInfo;
 		}
 
 		/// <summary>
 		/// Reference to the server that accepted this connection
 		/// </summary>
-		public TCPServer myServer { get; }
+		public TCPServer Server { get; }
 
 		/// <summary>
 		/// Basic Information about client
 		/// </summary>
-		public TCPClientInfo clientInfo { get; }
+		public TCPClientInfo ClientInfo { get; }
 	}
 }

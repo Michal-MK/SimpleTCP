@@ -7,20 +7,20 @@ namespace Igor.TCP {
 	/// </summary>
 	public class ClientDisconnectedEventArgs: EventArgs {
 
-		internal ClientDisconnectedEventArgs(byte clientID, DisconnectType disconnectType) {
-			this.clientID = clientID;
-			this.disconnectType = disconnectType;
+		internal ClientDisconnectedEventArgs(TCPClientInfo clientInfo, DisconnectType disconnectType) {
+			ClientInfo = clientInfo;
+			DisconnectType = disconnectType;
 		}
 
 		/// <summary>
 		/// ID of the disconnected client
 		/// </summary>
-		public byte clientID { get; }
+		public TCPClientInfo ClientInfo { get; }
 
 		/// <summary>
 		/// The way client disconnected
 		/// </summary>
-		public DisconnectType disconnectType { get; }
+		public DisconnectType DisconnectType { get; }
 	}
 
 }

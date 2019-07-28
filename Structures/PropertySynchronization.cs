@@ -7,40 +7,39 @@ namespace Igor.TCP {
 		/// <summary>
 		/// ID of the property packet
 		/// </summary>
-		internal byte packetID { get; }
+		internal byte PacketID { get; }
 
 		/// <summary>
 		/// Instance of the class where to modify the property
 		/// </summary>
-		internal object classInstance { get; }
+		internal object ClassInstance { get; }
 
 		/// <summary>
 		/// The property to keep in sync
 		/// </summary>
-		internal PropertyInfo property { get; }
+		internal PropertyInfo Property { get; }
 
 		/// <summary>
 		/// Wrapper to get the type of the property
 		/// </summary>
-		internal Type propertyType { get { return property.PropertyType; } }
-
+		internal Type propertyType => Property.PropertyType;
 		/// <summary>
 		/// Wrapper to get the type of the class instance
 		/// </summary>
-		internal Type classInstanceType { get { return property.DeclaringType; } } 
+		internal Type ClassInstanceType => Property.DeclaringType;
 
 		/// <summary>
 		/// Default Constructor
 		/// </summary>
 		internal PropertySynchronization(byte packetID, object classInstance, string propertyName) {
-			this.packetID = packetID;
-			this.classInstance = classInstance;
+			PacketID = packetID;
+			ClassInstance = classInstance;
 
-			property = classInstance.GetType().GetProperty(propertyName);
+			Property = classInstance.GetType().GetProperty(propertyName);
 
-			if (property == null) {
+			if (Property == null) {
 				if (classInstance.GetType().GetProperty(propertyName, BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.Static) != null) {
-					throw new InvalidOperationException("Only public properties may be synchronized");
+					throw new InvalidOperationException("Only public non static properties may be synchronized");
 				}
 				throw new NotImplementedException("Attempting to sync a non-existing property!");
 			}

@@ -19,7 +19,7 @@ namespace Igor.TCP {
 		/// Disconnect and let server know that this client is disconnecting
 		/// </summary>
 		public void DisconnectFromServer(byte myID) {
-			SendDataImmediate(DataIDs.ClientDisconnected, new byte[] { myID });
+			SendDataImmediate(DataIDs.ClientDisconnected, SimpleTCPHelper.GetBytesFromObject(myInfo));
 			Dispose();
 		}
 
@@ -28,14 +28,14 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="data"></param>
 		protected override void HigherLevelDataReceived(ReceivedData data) {
-			if (data.dataType == typeof(ClientDisconnectedPacket)) {
+			if (data.DataType == typeof(ClientDisconnectedPacket)) {
 				_OnClientKickedFromServer?.Invoke(this, EventArgs.Empty);
 			}
-			if (data.dataType == typeof(OnPropertySynchronizationEventArgs)) {
+			if (data.DataType == typeof(OnPropertySynchronizationEventArgs)) {
 				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
-					syncID = ((byte[])data.receivedObject)[0],
-					propertyName = client.getConnection.dataIDs.syncedProperties[((byte[])data.receivedObject)[0]].property.Name,
-					instance = client.getConnection.dataIDs.syncedProperties[((byte[])data.receivedObject)[0]].classInstance
+					syncID = ((byte[])data.ReceivedObject)[0],
+					propertyName = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].Property.Name,
+					instance = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].ClassInstance
 				});
 			}
 		}

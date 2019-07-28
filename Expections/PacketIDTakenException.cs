@@ -11,18 +11,18 @@ namespace Igor.TCP {
 		/// Default constructor
 		/// </summary>
 		internal PacketIDTakenException(byte packetID, Type packetDataType, string message) : base(message) {
-			this.packetID = packetID;
-			this.packetDataType = packetDataType;
+			this.PacketID = packetID;
+			this.PacketDataType = packetDataType;
 		}
 
 		/// <summary>
 		/// The ID that was attempted to register
 		/// </summary>
-		public byte packetID { get; set; }
+		public byte PacketID { get; set; }
 
 		/// <summary>
 		/// The type of data that is already registered
 		/// </summary>
-		public Type packetDataType { get; set; }
+		public Type PacketDataType { get; set; }
 	}
 }

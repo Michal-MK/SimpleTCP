@@ -18,19 +18,19 @@ namespace Igor.TCP {
 			client.Disconnect();
 
 			await Task.Delay(100);;
-			Assert.IsTrue(client.getConnection == null);
+			Assert.IsTrue(client.Connection == null);
 
 			client.Connect(null);
 
 			await Task.Delay(100);;
-			Assert.IsTrue(client.clientInfo.clientID == 1);
-			Assert.IsTrue(client.getConnection != null);
-			Assert.IsTrue(client.getConnection.listeningForData);
-			Assert.IsTrue(client.getConnection.sendingData);
+			Assert.IsTrue(client.ClientInfo.ClientID == 1);
+			Assert.IsTrue(client.Connection != null);
+			Assert.IsTrue(client.Connection.ListeningForData);
+			Assert.IsTrue(client.Connection.SendingData);
 			Assert.IsTrue(server.getConnectedClients.Length == 1);
-			Assert.IsTrue(server.getConnectedClients[0].clientID == 1);
-			Assert.IsTrue(server.GetConnection(1).sendingData);
-			Assert.IsTrue(server.GetConnection(1).listeningForData);
+			Assert.IsTrue(server.getConnectedClients[0].ClientID == 1);
+			Assert.IsTrue(server.GetConnection(1).SendingData);
+			Assert.IsTrue(server.GetConnection(1).ListeningForData);
 
 			await server.Stop();
 		}

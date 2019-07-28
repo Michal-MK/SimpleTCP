@@ -60,22 +60,22 @@ namespace Igor.TCP {
 		internal readonly Dictionary<byte, Type> requestTypeMap = new Dictionary<byte, Type>();
 		internal readonly Dictionary<byte, Delegate> responseFunctionMap = new Dictionary<byte, Delegate>();
 
-		private RequestHandler responseManager;
+		private readonly RequestHandler responseManager;
 
 		internal event EventHandler<DataReroutedEventArgs> OnRerouteRequest;
 
-		private readonly TCPConnection _connection;
+		private readonly TCPConnection connection;
 
 		internal IRerouteCapable rerouter = null;
 
 		internal DataIDs(TCPConnection connection) {
 			responseManager = new RequestHandler(connection);
-			_connection = connection;
+			this.connection = connection;
 		}
 
 		/// <exception cref="NotImplementedException"></exception>
 		/// <exception cref="UndefinedPacketException"></exception>
-		internal Type IndetifyID(byte packetID, byte fromClient, byte[] data) {
+		internal Type IndentifyID(byte packetID, byte fromClient, byte[] data) {
 			if (rerouter != null && Reroute(packetID, fromClient, data)) {
 				return typeof(ReroutingInfo);
 			}
@@ -96,7 +96,7 @@ namespace Igor.TCP {
 
 					TCPRequest request = new TCPRequest(requestID);
 
-					object obj = responseFunctionMap[request.packetID].DynamicInvoke(null);
+					object obj = responseFunctionMap[request.PacketID].DynamicInvoke(null);
 
 					if (obj is byte[]) {
 						responseManager.HandleRequest(request, obj as byte[]);
@@ -113,12 +113,12 @@ namespace Igor.TCP {
 					byte[] realData = new byte[data.Length - 1];
 					//Efficient unsafe way to get array without copying
 					Array.Copy(data, 1, realData, 0, realData.Length);
-					syncedProperties[data[0]].property.SetValue(syncedProperties[data[0]].classInstance,
+					syncedProperties[data[0]].Property.SetValue(syncedProperties[data[0]].ClassInstance,
 						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case ClientDisconnected: {
-					return typeof(ClientDisconnectedPacket);
+					return typeof(TCPClientInfo);
 				}
 				default: {
 					if (customIDs.ContainsKey(packetID)) {
@@ -155,11 +155,11 @@ namespace Igor.TCP {
 
 			//Dictionary
 			if (customIDs.ContainsKey(packetID)) {
-				dataType = customIDs[packetID].dataType;
+				dataType = customIDs[packetID].DataType;
 				message = "This ID is taken by a packet for general data transmit";
 				return true;
 			}
-			if (_connection.valueProvider.providedValues.ContainsKey(packetID)) {
+			if (connection.valueProvider.ProvidedValues.ContainsKey(packetID)) {
 				dataType = typeof(object);
 				message = "This ID is taken by a packet for general data transmit";
 				return true;
@@ -170,18 +170,18 @@ namespace Igor.TCP {
 		}
 
 		private bool Reroute(byte ID, byte fromClient, byte[] data) {
-			if (rerouter.rerouteDefinitions.ContainsKey(ID)) {
+			if (rerouter.RerouteDefinitions.ContainsKey(ID)) {
 				ReroutingInfo info = null;
-				for (int i = 0; i < rerouter.rerouteDefinitions[ID].Count; i++) {
-					if (responseManager.connection.myInfo.clientID != rerouter.rerouteDefinitions[ID][i].toClient) {
-						info = rerouter.rerouteDefinitions[ID][i];
+				for (int i = 0; i < rerouter.RerouteDefinitions[ID].Count; i++) {
+					if (responseManager.connection.myInfo.ClientID != rerouter.RerouteDefinitions[ID][i].ToClient) {
+						info = rerouter.RerouteDefinitions[ID][i];
 						break;
 					}
 				}
 				if (info == null) {
 					return false;
 				}
-				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.toClient, fromClient, info.packetID, data));
+				OnRerouteRequest?.Invoke(this, new DataReroutedEventArgs(info.ToClient, fromClient, info.PacketID, data));
 				return true;
 			}
 			return false;
@@ -191,19 +191,19 @@ namespace Igor.TCP {
 			customIDs.Add(ID, new CustomPacket(ID, typeof(TData), new Action<byte, object>((b, o) => { callback(b, (TData)o); })));
 		}
 
-		internal void RemoveCustoMPacket(byte ID) {
+		internal void RemoveCustomPacket(byte ID) {
 			customIDs.Remove(ID);
 		}
 
 		internal void SetForRerouting(ReroutingInfo info) {
-			if (!rerouter.rerouteDefinitions.ContainsKey(info.packetID)) {
-				rerouter.rerouteDefinitions.Add(info.packetID, new List<ReroutingInfo>() { info });
+			if (!rerouter.RerouteDefinitions.ContainsKey(info.PacketID)) {
+				rerouter.RerouteDefinitions.Add(info.PacketID, new List<ReroutingInfo>() { info });
 			}
 			else {
-				if (rerouter.rerouteDefinitions[info.packetID].Find((p) => { return p.toClient == info.toClient && p.packetID == info.packetID; }) != null) {
-					rerouter.rerouteDefinitions[info.packetID].Add(info);
+				if (rerouter.RerouteDefinitions[info.PacketID].Find((p) => { return p.ToClient == info.ToClient && p.PacketID == info.PacketID; }) != null) {
+					rerouter.RerouteDefinitions[info.PacketID].Add(info);
 				}
-				throw new PacketIDTakenException(info.packetID, null, "Attempted to add a rerouting definition, but such definition already exists!");
+				throw new PacketIDTakenException(info.PacketID, null, "Attempted to add a rerouting definition, but such definition already exists!");
 			}
 		}
 	}
