@@ -14,15 +14,14 @@ namespace Igor.TCP {
 	public class TCPServer : IDisposable, IValueProvider, IRerouteCapable {
 
 		private TcpListener clientConnectionListener;
+		private bool listenForClientConnections = false;
 
-		private Dictionary<byte, ServerToClientConnection> connectedClients = new Dictionary<byte, ServerToClientConnection>();
-
-		internal bool listenForClientConnections = false;
+		private readonly Dictionary<byte, ServerToClientConnection> connectedClients = new Dictionary<byte, ServerToClientConnection>();
 
 		private IPAddress currentAddress;
 		private ushort currentPort;
 
-		private ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
+		private readonly ManualResetEventSlim serverStartEvnt = new ManualResetEventSlim();
 
 		Dictionary<byte, Delegate> IValueProvider.ProvidedValues { get; } = new Dictionary<byte, Delegate>();
 		Dictionary<byte, List<ReroutingInfo>> IRerouteCapable.RerouteDefinitions { get; } = new Dictionary<byte, List<ReroutingInfo>>();
@@ -31,7 +30,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Client ID used by packets that come from the server
 		/// </summary>
-		public const byte ServerPacketOriginID = 0;
+		public const byte SERVER_PACKET_ORIGIN_ID = 0;
 
 		/// <summary>
 		/// Configuration of this server
@@ -293,7 +292,7 @@ namespace Igor.TCP {
 				byte[] merged = new byte[rawData.Length + 1];
 				merged[0] = ID;
 				rawData.CopyTo(merged, 1);
-				connectedClients[clientID].SendData(DataIDs.PropertySyncID, ServerPacketOriginID, merged);
+				connectedClients[clientID].SendData(DataIDs.PropertySyncID, SERVER_PACKET_ORIGIN_ID, merged);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -363,12 +362,7 @@ namespace Igor.TCP {
 		/// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
 		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
-				if (info.dataIDs.customIDs.ContainsKey(packetID)) {
-					info.SendData(packetID, info.infoAboutOtherSide.ClientID, SimpleTCPHelper.GetBytesFromObject(data));
-				}
-				else {
-					throw new UndefinedPacketException("Packet is not defined!", packetID, typeof(TData));
-				}
+				info.SendData(packetID, info.infoAboutOtherSide.ClientID, SimpleTCPHelper.GetBytesFromObject(data));
 			}
 		}
 

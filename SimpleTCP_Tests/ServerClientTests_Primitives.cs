@@ -44,13 +44,13 @@ namespace Igor.TCP {
 		}
 
 		private void GetConnection_OnInt64Received(object sender, PacketReceivedEventArgs<long> e) {
-			if (e.data == SERVER_LONG && e.clientID == TCPServer.ServerPacketOriginID) {
+			if (e.data == SERVER_LONG && e.clientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
 				eventsPassed++;
 			}
 		}
 
 		private void GetConnection_OnStringReceived(object sender, PacketReceivedEventArgs<string> e) {
-			if (e.data == SERVER_STRING && e.clientID == TCPServer.ServerPacketOriginID) {
+			if (e.data == SERVER_STRING && e.clientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
 				eventsPassed++;
 			}
 		}
