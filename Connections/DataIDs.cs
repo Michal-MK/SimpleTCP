@@ -91,18 +91,19 @@ namespace Igor.TCP {
 					byte requestID = data[0];
 
 					if (!responseFunctionMap.ContainsKey(requestID)) {
-						throw new NotImplementedException($"Server is requesting response for '{requestID}' byteID, but no such ID is defined!");
-					}
-
-					TCPRequest request = new TCPRequest(requestID);
-
-					object obj = responseFunctionMap[request.PacketID].DynamicInvoke(null);
-
-					if (obj is byte[]) {
-						responseManager.HandleRequest(request, obj as byte[]);
+						responseManager.HandleRequest(new TCPRequest(requestID),
+							$"A request was made under {requestID} {(connection.myInfo.IsServer ? "Server" : "Client")} (ID:{connection.myInfo.ClientID} can not respond!)");
 					}
 					else {
-						responseManager.HandleRequest(request, obj);
+						TCPRequest request = new TCPRequest(requestID);
+						object obj = responseFunctionMap[request.PacketID].DynamicInvoke(null);
+
+						if (obj is byte[] array) {
+							responseManager.HandleRequest(request, array);
+						}
+						else {
+							responseManager.HandleRequest(request, obj);
+						}
 					}
 					return typeof(TCPRequest);
 				}
@@ -111,10 +112,10 @@ namespace Igor.TCP {
 				}
 				case PropertySyncID: {
 					byte[] realData = new byte[data.Length - 1];
-					//Efficient unsafe way to get array without copying
+					byte dataID = data[0];
 					Array.Copy(data, 1, realData, 0, realData.Length);
-					syncedProperties[data[0]].Property.SetValue(syncedProperties[data[0]].ClassInstance,
-						SimpleTCPHelper.GetObject(syncedProperties[data[0]].propertyType, realData));
+					syncedProperties[dataID].Property.SetValue(syncedProperties[dataID].ClassInstance,
+						SimpleTCPHelper.GetObject(syncedProperties[dataID].propertyType, realData));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case ClientDisconnected: {
@@ -200,8 +201,9 @@ namespace Igor.TCP {
 				rerouter.RerouteDefinitions.Add(info.PacketID, new List<ReroutingInfo>() { info });
 			}
 			else {
-				if (rerouter.RerouteDefinitions[info.PacketID].Find((p) => { return p.ToClient == info.ToClient && p.PacketID == info.PacketID; }) != null) {
+				if (rerouter.RerouteDefinitions[info.PacketID].Find((p) => { return p.ToClient == info.ToClient && p.PacketID == info.PacketID; }) == null) {
 					rerouter.RerouteDefinitions[info.PacketID].Add(info);
+					return;
 				}
 				throw new PacketIDTakenException(info.PacketID, null, "Attempted to add a rerouting definition, but such definition already exists!");
 			}

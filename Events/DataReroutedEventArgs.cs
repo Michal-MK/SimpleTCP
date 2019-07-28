@@ -23,6 +23,9 @@ namespace Igor.TCP {
 		/// </summary>
 		public byte originClient { get; }
 
+		/// <summary>
+		/// The raw data that were rerouted
+		/// </summary>
 		internal byte[] data { get; }
 
 		/// <summary>

@@ -26,7 +26,7 @@ namespace Igor.TCP {
 
 			Assert.IsTrue(server.getConnectedClients[0].IsServer == false);
 
-			Assert.IsTrue(Equals(server.getConnectedClients[0].Address, SimpleTCPHelper.GetActiveIPv4Address()));
+			Assert.IsTrue(server.getConnectedClients[0].Address.ToString() == SimpleTCPHelper.GetActiveIPv4Address().ToString());
 			Assert.IsTrue(server.getConnectedClients[0].Name == Environment.UserName);
 			Assert.IsTrue(server.getConnectedClients[0].ClientID == 1);
 

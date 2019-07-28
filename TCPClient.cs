@@ -30,7 +30,7 @@ namespace Igor.TCP {
 		public event EventHandler<OnPropertySynchronizationEventArgs> OnPropertySynchronized;
 
 		/// <summary>
-		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
+		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(string ipAddress, ushort port)
@@ -38,7 +38,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Initialize new TCPClient by connecting to 'ipAddress' on port 'port'
+		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(IPAddress ipAddress, ushort port)
@@ -46,7 +46,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Initialize new TCPClient by connecting to a server defined in 'data'
+		/// Initialize new <see cref="TCPClient"/> using a <see cref="ConnectionData"/> class
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(ConnectionData data) {
@@ -99,7 +99,7 @@ namespace Igor.TCP {
 
 
 		/// <summary>
-		/// Set listening for incoming data from connected client 'clientID'
+		/// Set listening for incoming data from the server
 		/// </summary>
 		public bool IsListeningForData {
 			get { return Connection.ListeningForData; }
@@ -115,7 +115,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Define 'propID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
+		/// Define 'propertyPacketID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
 		/// </summary>
 		public void SyncProperty(object instance, string propertyName, byte propertyPacketID) {
 			Connection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));
@@ -124,7 +124,7 @@ namespace Igor.TCP {
 		#region Communication Definitions
 
 		/// <summary>
-		/// Provide a value to all connected clients
+		/// Provide a value to the server
 		/// </summary>
 		public void ProvideValue<T>(byte packetID, Func<T> function) {
 			(this as IValueProvider).ProvidedValues.Add(packetID, function);
@@ -133,10 +133,14 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Request a value from a client
+		/// Request a provided value from the server
 		/// </summary>
+		/// <exception cref="NoResponseException"></exception>
 		public async Task<T> GetValue<T>(byte packetID) {
-			TCPResponse resp = await Connection.requestCreator.Request(packetID);
+			TCPResponse resp = await Connection.requestCreator.Request(packetID, typeof(T));
+			if(resp.DataType == typeof(NoResponseException)) {
+				throw new NoResponseException(resp);
+			}
 			return (T)resp.GetObject;
 		}
 

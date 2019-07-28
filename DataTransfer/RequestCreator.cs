@@ -7,23 +7,22 @@ namespace Igor.TCP {
 		internal TCPConnection connection;
 		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
 
+		internal Type responseObjectType; //TODO can be overriden by another request
+
 		internal RequestCreator(TCPConnection connection) {
 			this.connection = connection;
 		}
 
-		private TCPResponse currentResponseObject;
+		private TCPResponse currentResponseObject; 
 
-		internal async Task<TCPResponse> Request(byte ID) {
+		internal async Task<TCPResponse> Request(byte ID, Type type) {
 			evnt.Reset();
-			if (!connection.dataIDs.requestTypeMap.ContainsKey(ID)) {
-				throw new NotImplementedException(string.Format("Byte {0} is not a valid Request identifier, " +
-					"Is it not defined yet?", ID));
-			}
 			return await Task.Run(delegate () {
 				byte request = ID;
 				connection.SendData(DataIDs.RequestReceptionID, request);
 				connection._OnResponse += Connection_OnResponse;
 				evnt.Wait();
+				currentResponseObject.DataType = type;
 				return currentResponseObject;
 			});
 		}

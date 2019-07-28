@@ -46,8 +46,11 @@ namespace Igor.TCP {
 		internal static byte[] GetBytesFromObject(object obj) {
 			byte[] bytes;
 
-			if (obj is bool b) {
-				bytes = BitConverter.GetBytes(b);
+			if (obj is bool bo) {
+				bytes = BitConverter.GetBytes(bo);
+			}
+			else if(obj is byte by) {
+				bytes = new[] { by };
 			}
 			else if (obj is string str) {
 				bytes = System.Text.Encoding.UTF8.GetBytes(str);
@@ -94,6 +97,9 @@ namespace Igor.TCP {
 
 			if (t == typeof(bool)) {
 				obj = BitConverter.ToBoolean(bytes, 0);
+			}
+			else if (t == typeof(byte)) {
+				obj = bytes[0];
 			}
 			else if (t == typeof(string)) {
 				obj = System.Text.Encoding.UTF8.GetString(bytes);
@@ -184,7 +190,7 @@ namespace Igor.TCP {
 				}
 				catch (Exception) {
 					throw new SerializationException("Unable to deserialize stream into type '" + tType.ToString() +
-						"' possibly the stream was not serialized using the internal  serializer," +
+						"' possibly the stream was not serialized using the internal serializer," +
 						" in that case you have to write your own deserializer as well.");
 				}
 			}

@@ -28,10 +28,23 @@ namespace Igor.TCP {
 		public string Name { get; }
 
 		/// <summary>
-		/// The ID assigned from server<para>Value 255 is invalid/not yet assigned!</para> 
+		/// The ID assigned from server
 		/// </summary>
-		public byte ClientID { get; internal set; } = 255;
+		/// <exception cref="InvalidOperationException"></exception>
+		public byte ClientID {
+			get {
+				if (IsValid) {
+					return clientID;
+				}
+				throw new InvalidOperationException("Client has not been given an ID yet");
+			}
+			internal set {
+				clientID = value;
+			}
+		}
+		private byte clientID = 255;
 
+		internal bool IsValid => clientID != 255;
 		/// <summary>
 		/// Initialize new <see cref="TCPClientInfo"/>
 		/// </summary>

@@ -37,7 +37,7 @@ namespace Igor.TCP {
 			client.Connection.SendData(CLIENT_STRING);
 			client.Connection.SendData(CLIENT_LONG);
 
-			await Task.Delay(100);;
+			await Task.Delay(100);
 			Assert.IsTrue(eventsPassed == 4);
 
 			await server.Stop();
