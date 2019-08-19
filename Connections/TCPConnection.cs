@@ -239,9 +239,6 @@ namespace Igor.TCP {
 				else if (data.DataID == DataIDs.RequestReceptionID) {
 					continue;
 				}
-				else if (data.DataType == typeof(SocketException)) {
-					HigherLevelDataReceived(data);
-				}
 				else {
 					HigherLevelDataReceived(data);
 				}
@@ -260,7 +257,6 @@ namespace Igor.TCP {
 #if DEBUG
 			Console.WriteLine("Waiting for next packet...");
 #endif
-
 
 			byte[] packetSize = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
 			byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
@@ -301,7 +297,7 @@ namespace Igor.TCP {
 			byte senderID = GetSenderID(fromClient);
 			byte packetIDSingle = GetPacketID(packetID);
 
-			Type dataType = dataIDs.IndentifyID(packetIDSingle, senderID, data);
+			Type dataType = dataIDs.IdentifyID(packetIDSingle, senderID, data);
 			object dataObject;
 
 			if (packetIDSingle == DataIDs.StringID) {

@@ -75,7 +75,7 @@ namespace Igor.TCP {
 
 		/// <exception cref="NotImplementedException"></exception>
 		/// <exception cref="UndefinedPacketException"></exception>
-		internal Type IndentifyID(byte packetID, byte fromClient, byte[] data) {
+		internal Type IdentifyID(byte packetID, byte fromClient, byte[] data) {
 			if (rerouter != null && Reroute(packetID, fromClient, data)) {
 				return typeof(ReroutingInfo);
 			}
@@ -115,7 +115,7 @@ namespace Igor.TCP {
 					byte dataID = data[0];
 					Array.Copy(data, 1, realData, 0, realData.Length);
 					syncedProperties[dataID].Property.SetValue(syncedProperties[dataID].ClassInstance,
-						SimpleTCPHelper.GetObject(syncedProperties[dataID].propertyType, realData));
+						SimpleTCPHelper.GetObject(syncedProperties[dataID].PropertyType, realData));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case ClientDisconnected: {

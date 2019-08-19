@@ -108,7 +108,7 @@ namespace Igor.TCP {
 				return Task.Run(() => {
 					Console.WriteLine(address);
 					listenForClientConnections = true;
-					new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener" }.Start();
+					new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener", IsBackground = true }.Start();
 					serverStartEvnt.Wait();
 					OnServerStarted?.Invoke(this, EventArgs.Empty);
 				});

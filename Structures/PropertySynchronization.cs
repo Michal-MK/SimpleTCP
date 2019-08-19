@@ -22,7 +22,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Wrapper to get the type of the property
 		/// </summary>
-		internal Type propertyType => Property.PropertyType;
+		internal Type PropertyType => Property.PropertyType;
 		/// <summary>
 		/// Wrapper to get the type of the class instance
 		/// </summary>
