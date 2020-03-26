@@ -1,6 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Authors>Michal Hazdra</Authors>
+        <Company>Michal-MK</Company>
+        <Product>Simple TCP</Product>
+        <PackageId>Igor.SimpleTCP</PackageId>
     </PropertyGroup>
     <ItemGroup>
       <Compile Remove="SimpleTCP_Tests\**" />
