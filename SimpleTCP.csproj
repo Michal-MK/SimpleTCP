@@ -6,6 +6,9 @@
         <Company>Michal-MK</Company>
         <Product>Simple TCP</Product>
         <PackageId>Igor.SimpleTCP</PackageId>
+        <Version>1.0.1</Version>
+        <Description>Simple to use TCP library with direct string and int transmission</Description>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
     <ItemGroup>
       <Compile Remove="SimpleTCP_Tests\**" />
