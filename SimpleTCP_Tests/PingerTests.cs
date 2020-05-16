@@ -14,7 +14,7 @@ namespace SimpleTCP_Tests {
 		[TestMethod]
 		public void RangeTest() {
 
-			IEnumerable<PingerHost> hosts = Pinger.PingAll("192.168.1.1-254");
+			IEnumerable<PingerHost> hosts = Pinger.PingAll("192.168.0.1-254");
 			string activeAddress = SimpleTCPHelper.GetActiveIPv4Address().ToString();
 
 			Assert.IsTrue(hosts.Where(s => s.IP == activeAddress).Count() == 1);

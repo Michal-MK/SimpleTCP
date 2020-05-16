@@ -25,13 +25,13 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 			Assert.IsTrue(client1.Connection != null);
 			Assert.IsTrue(client2.Connection != null);
-			Assert.IsTrue(server.getConnectedClients.Length == 2);
-			Assert.IsTrue(server.getConnectedClients[0].IsServer == false);
-			Assert.IsTrue(server.getConnectedClients[0].ClientID == 1);
-			Assert.IsTrue(server.getConnectedClients[0].Name == "Client 1");
-			Assert.IsTrue(server.getConnectedClients[1].IsServer == false);
-			Assert.IsTrue(server.getConnectedClients[1].ClientID == 2);
-			Assert.IsTrue(server.getConnectedClients[1].Name == "Client 2");
+			Assert.IsTrue(server.ConnectedClients.Length == 2);
+			Assert.IsTrue(server.ConnectedClients[0].IsServer == false);
+			Assert.IsTrue(server.ConnectedClients[0].ClientID == 1);
+			Assert.IsTrue(server.ConnectedClients[0].Name == "Client 1");
+			Assert.IsTrue(server.ConnectedClients[1].IsServer == false);
+			Assert.IsTrue(server.ConnectedClients[1].ClientID == 2);
+			Assert.IsTrue(server.ConnectedClients[1].Name == "Client 2");
 
 			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(0); });
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(3); });

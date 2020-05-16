@@ -33,9 +33,9 @@ namespace Igor.TCP {
 			}
 			if (data.DataType == typeof(OnPropertySynchronizationEventArgs)) {
 				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
-					syncID = ((byte[])data.ReceivedObject)[0],
-					propertyName = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].Property.Name,
-					instance = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].ClassInstance
+					SynchronizationPacketID = ((byte[])data.ReceivedObject)[0],
+					PropertyName = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].Property.Name,
+					Instance = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].ClassInstance
 				});
 			}
 		}

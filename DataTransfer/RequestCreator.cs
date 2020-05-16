@@ -7,13 +7,11 @@ namespace Igor.TCP {
 		internal TCPConnection connection;
 		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
 
-		internal Type responseObjectType; //TODO can be overriden by another request
-
 		internal RequestCreator(TCPConnection connection) {
 			this.connection = connection;
 		}
 
-		private TCPResponse currentResponseObject; 
+		private TCPResponse currentResponseObject;
 
 		internal async Task<TCPResponse> Request(byte ID, Type type) {
 			evnt.Reset();
@@ -42,7 +40,7 @@ namespace Igor.TCP {
 			}
 		}
 
-		 ~RequestCreator() {
+		~RequestCreator() {
 			Dispose(false);
 		}
 

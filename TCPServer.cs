@@ -165,19 +165,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Get all connected clients
 		/// </summary>
-		public TCPClientInfo[] getConnectedClients {
-			get {
-				TCPClientInfo[] connections = new TCPClientInfo[connectedClients.Keys.Count];
-				Dictionary<byte, ServerToClientConnection>.Enumerator enumer = connectedClients.GetEnumerator();
-				int i = 0;
-				while (enumer.MoveNext()) {
-					KeyValuePair<byte, ServerToClientConnection> kv = enumer.Current;
-					connections[i] = kv.Value.infoAboutOtherSide;
-					i++;
-				}
-				return connections;
-			}
-		}
+		public TCPClientInfo[] ConnectedClients => connectedClients.Select(s => s.Value.infoAboutOtherSide).ToArray();
 
 		#endregion
 
@@ -283,7 +271,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Sends updated property value to connected 'clientID' with property id 'ID' and set value;
+		/// Sends updated property value to connected 'clientID' with property id 'ID' and set value
 		/// </summary>
 		/// <exception cref="NullReferenceException"></exception>
 		public void UpdateProp(byte clientID, byte ID, object value) {
@@ -306,7 +294,7 @@ namespace Igor.TCP {
 		/// Provide a value to all connected clients
 		/// </summary>
 		public void ProvideValue<T>(byte packetID, Func<T> function) {
-			foreach (TCPClientInfo info in getConnectedClients) {
+			foreach (TCPClientInfo info in ConnectedClients) {
 				if (connectedClients[info.ClientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
 					throw new PacketIDTakenException(packetID, dataType, message);
 				}
@@ -358,7 +346,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send custom data to all connected clients.
 		/// </summary>
-		/// <exception cref="UndefinedPacketException"></exception>
+		/// <exception cref="UndefinedPacketEventArgs"></exception>
 		/// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
 		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {

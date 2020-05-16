@@ -20,7 +20,7 @@ namespace Igor.TCP {
 			await server.Start(65000);
 
 			Assert.IsTrue(server.isListeningForClients);
-			Assert.IsTrue(server.getConnectedClients.Length == 0);
+			Assert.IsTrue(server.ConnectedClients.Length == 0);
 			Assert.IsTrue(eventFired);
 
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(1); });
@@ -28,7 +28,7 @@ namespace Igor.TCP {
 			await server.Stop();
 
 			Assert.IsFalse(server.isListeningForClients);
-			Assert.IsTrue(server.getConnectedClients.Length == 0);
+			Assert.IsTrue(server.ConnectedClients.Length == 0);
 		}
 
 		private void Server_OnServerStarted(object sender, EventArgs e) {

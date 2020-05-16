@@ -27,7 +27,7 @@ namespace Igor.TCP {
 			server.SyncProperty(1, this, nameof(serverProperty), PROP_ID);
 
 			Assert.ThrowsException<InvalidOperationException>(() => { client.SyncProperty(this, nameof(clientProperty), PROP_ID); });
-			Assert.ThrowsException<NotImplementedException>(() => { client.SyncProperty(this, "a", PROP_ID); });
+			Assert.ThrowsException<NotImplementedException>(() => { client.SyncProperty(this, "Nonexistent Property Name", PROP_ID); });
 
 			client.SyncProperty(this, nameof(clientPropertyPublic), PROP_ID);
 
@@ -82,8 +82,8 @@ namespace Igor.TCP {
 		private void Client_OnPropertySynchronized(object sender, OnPropertySynchronizationEventArgs e) {
 			checks = new bool[3];
 
-			checks[0] = e.propertyName == nameof(myPropClient);
-			checks[1] = e.syncID == SYNC_ID;
+			checks[0] = e.PropertyName == nameof(myPropClient);
+			checks[1] = e.SynchronizationPacketID == SYNC_ID;
 			checks[2] = myProp == myPropClient;
 		}
 		#endregion

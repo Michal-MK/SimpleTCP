@@ -35,6 +35,11 @@ namespace Igor.TCP {
 		public event EventHandler<PacketReceivedEventArgs<Int64>> OnInt64Received;
 
 		/// <summary>
+		/// Called when receiving a packet ID that is not defined internally and in the user's packet list
+		/// </summary>
+		public event EventHandler<UndefinedPacketEventArgs> OnUndefinedPacketReceived;
+
+		/// <summary>
 		/// Access to data types for custom packets
 		/// </summary>
 		public RequestHandler ResponseGenerator { get; }
@@ -43,6 +48,7 @@ namespace Igor.TCP {
 
 		#region Internal and private properties/fields
 
+		internal TcpClient baseClient;
 		internal NetworkStream mainNetworkStream;
 
 		internal event EventHandler<TCPResponse> _OnResponse;
@@ -64,6 +70,7 @@ namespace Igor.TCP {
 		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide, IValueProvider valueProvider) {
 			this.infoAboutOtherSide = infoAboutOtherSide;
 			this.myInfo = myInfo;
+			this.baseClient = baseClient;
 
 			mainNetworkStream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
@@ -134,7 +141,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send custom data type using internal serialization/deserialization mechanisms
 		/// </summary>
-		/// <exception cref="UndefinedPacketException"></exception>
+		/// <exception cref="UndefinedPacketEventArgs"></exception>
 		/// <exception cref="InvalidOperationException"></exception>
 		public void SendData<TData>(byte packetID, TData data) {
 			if (!typeof(TData).IsSerializable) {
@@ -209,6 +216,10 @@ namespace Igor.TCP {
 				if (data.DataType == typeof(SocketException)) {
 					ListeningForData = false;
 					return;
+				}
+
+				if (data.DataType == typeof(UndefinedPacketEventArgs)) {
+					OnUndefinedPacketReceived?.Invoke(this, new UndefinedPacketEventArgs(data.DataID, (byte[])data.ReceivedObject));
 				}
 
 				#region Primitives
@@ -313,7 +324,7 @@ namespace Igor.TCP {
 			else if (dataType == typeof(TCPRequest)) {
 				dataObject = data[0];
 			}
-			else if (dataType == typeof(OnPropertySynchronizationEventArgs)) {
+			else if (dataType == typeof(OnPropertySynchronizationEventArgs) || dataType == typeof(UndefinedPacketEventArgs)) {
 				dataObject = data;
 			}
 			else if (dataType == typeof(TCPClientInfo)) {
@@ -361,7 +372,8 @@ namespace Igor.TCP {
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
 				requestCreator.Dispose();
-				mainNetworkStream.Dispose();
+				baseClient.Close();
+				baseClient.Dispose();
 				disposedValue = true;
 			}
 		}

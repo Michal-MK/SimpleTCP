@@ -11,12 +11,12 @@ namespace Igor.TCP {
 		#region Constant byte IDs and sizes of packets
 
 		/// <summary>
-		/// Packet ID for string
+		/// Packet ID for <see langword="string"/>
 		/// </summary>
 		internal const byte StringID = 0;
 
 		/// <summary>
-		/// Packet ID for Int64 (long)
+		/// Packet ID for Int64 (<see langword="long"/>)
 		/// </summary>
 		internal const byte Int64ID = 1;
 
@@ -74,7 +74,7 @@ namespace Igor.TCP {
 		}
 
 		/// <exception cref="NotImplementedException"></exception>
-		/// <exception cref="UndefinedPacketException"></exception>
+		/// <exception cref="UndefinedPacketEventArgs"></exception>
 		internal Type IdentifyID(byte packetID, byte fromClient, byte[] data) {
 			if (rerouter != null && Reroute(packetID, fromClient, data)) {
 				return typeof(ReroutingInfo);
@@ -125,7 +125,7 @@ namespace Igor.TCP {
 					if (customIDs.ContainsKey(packetID)) {
 						return typeof(CustomPacket);
 					}
-					throw new UndefinedPacketException("Received unknown packet!", packetID, null);
+					return typeof(UndefinedPacketEventArgs);
 				}
 			}
 		}
