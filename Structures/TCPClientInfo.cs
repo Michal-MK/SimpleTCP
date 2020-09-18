@@ -20,7 +20,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Address of current instance
 		/// </summary>
-		public IPAddress Address { get; }
+		public string Address { get; }
 
 		/// <summary>
 		/// The name of connected client, if not set up users computer name is used.
@@ -48,7 +48,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Initialize new <see cref="TCPClientInfo"/>
 		/// </summary>
-		public TCPClientInfo(string computerName, bool isServer, IPAddress clientAddress) {
+		public TCPClientInfo(string computerName, bool isServer, string clientAddress) {
 			IsServer = isServer;
 			Address = clientAddress;
 			Name = computerName;

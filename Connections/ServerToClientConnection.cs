@@ -22,12 +22,15 @@ namespace Igor.TCP {
 		protected override void HigherLevelDataReceived(ReceivedData data) {
 			if (data.DataType == typeof(TCPClient)) {
 				DisconnectClient(data.SenderID);
+				server.connectedClients.Remove(data.SenderID);
 			}
 			if (data.DataID == DataIDs.ClientDisconnected) {
 				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Success));
+				server.connectedClients.Remove(data.SenderID);
 			}
 			if (data.DataType == typeof(SocketException)) {
 				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
+				server.connectedClients.Remove(data.SenderID);
 			}
 		}
 

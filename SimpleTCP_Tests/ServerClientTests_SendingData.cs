@@ -33,7 +33,7 @@ namespace Igor.TCP {
 
 			await Task.Delay(100);
 
-			await server.Stop();
+			server.Stop();
 		}
 	}
 }

@@ -34,7 +34,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(client.Connection.SendingData);
 			Assert.IsTrue(client.ClientInfo.ClientID == 1);
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void Server_OnConnectionEstablished(object sender, ClientConnectedEventArgs e) {

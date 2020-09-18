@@ -25,7 +25,7 @@ namespace Igor.TCP {
 
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(1); });
 
-			await server.Stop();
+			server.Stop();
 
 			Assert.IsFalse(server.isListeningForClients);
 			Assert.IsTrue(server.ConnectedClients.Length == 0);

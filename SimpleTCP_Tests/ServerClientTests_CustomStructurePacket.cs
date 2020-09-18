@@ -62,7 +62,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(resp2.dataTest[0].moreData[0] == "Hell00000000000");
 
 			
-			await server.Stop();
+			server.Stop();
 		}
 
 		private SameTest.TestDataStruct AlsoGet() {

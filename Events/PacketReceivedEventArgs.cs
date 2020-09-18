@@ -8,16 +8,16 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Received data
 		/// </summary>
-		public TPacket data { get; }
+		public TPacket Data { get; }
 
 		/// <summary>
 		/// Packet origin
 		/// </summary>
-		public byte clientID { get; }
+		public byte ClientID { get; }
 
-		internal PacketReceivedEventArgs(TPacket data, byte clientID){
-			this.data = data;
-			this.clientID = clientID;
+		internal PacketReceivedEventArgs(TPacket data, byte clientID) {
+			this.Data = data;
+			this.ClientID = clientID;
 		}
 	}
 }

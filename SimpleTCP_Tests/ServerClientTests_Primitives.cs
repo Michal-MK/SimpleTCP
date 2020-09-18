@@ -40,29 +40,29 @@ namespace Igor.TCP {
 			await Task.Delay(100);
 			Assert.IsTrue(eventsPassed == 4);
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void GetConnection_OnInt64Received(object sender, PacketReceivedEventArgs<long> e) {
-			if (e.data == SERVER_LONG && e.clientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
+			if (e.Data == SERVER_LONG && e.ClientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
 				eventsPassed++;
 			}
 		}
 
 		private void GetConnection_OnStringReceived(object sender, PacketReceivedEventArgs<string> e) {
-			if (e.data == SERVER_STRING && e.clientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
+			if (e.Data == SERVER_STRING && e.ClientID == TCPServer.SERVER_PACKET_ORIGIN_ID) {
 				eventsPassed++;
 			}
 		}
 
 		private void ServerClientTests_OnInt64Received(object sender, PacketReceivedEventArgs<long> e) {
-			if (e.data == CLIENT_LONG && e.clientID == 1) {
+			if (e.Data == CLIENT_LONG && e.ClientID == 1) {
 				eventsPassed++;
 			}
 		}
 
 		private void ServerClientTests_OnStringReceived(object sender, PacketReceivedEventArgs<string> e) {
-			if (e.data == CLIENT_STRING && e.clientID == 1) {
+			if (e.Data == CLIENT_STRING && e.ClientID == 1) {
 				eventsPassed++;
 			}
 		}

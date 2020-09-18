@@ -45,7 +45,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(callbackSuccess);
 			Assert.IsTrue(rerouteCallbackSuccess);
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void OnServerReceivedStringArray(byte sender, string[] data) { /*Only definition needed*/ }

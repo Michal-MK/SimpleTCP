@@ -16,7 +16,7 @@ namespace Igor.TCP {
 		private TcpListener clientConnectionListener;
 		private bool listenForClientConnections = false;
 
-		private readonly Dictionary<byte, ServerToClientConnection> connectedClients = new Dictionary<byte, ServerToClientConnection>();
+		internal readonly Dictionary<byte, ServerToClientConnection> connectedClients = new Dictionary<byte, ServerToClientConnection>();
 
 		private IPAddress currentAddress;
 		private ushort currentPort;
@@ -121,15 +121,15 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Stops the server
 		/// </summary>
-		public async Task Stop() {
-			await Task.Run(delegate () {
-				listenForClientConnections = false;
-				clientConnectionListener.Stop();
-				foreach (ServerToClientConnection connection in connectedClients.Values.ToArray()) {
-					connection.DisconnectClient(connection.infoAboutOtherSide.ClientID);
-				}
-			});
+		public void Stop() {
+			listenForClientConnections = false;
+			clientConnectionListener.Stop();
+			foreach (ServerToClientConnection connection in connectedClients.Values) {
+				connection.DisconnectClient(connection.infoAboutOtherSide.ClientID);
+			}
+			connectedClients.Clear();
 		}
+
 
 		#endregion
 
@@ -155,7 +155,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public TCPConnection GetConnection(IPAddress address) {
 			foreach (var item in connectedClients) {
-				if (item.Value.infoAboutOtherSide.Address == address) {
+				if (item.Value.infoAboutOtherSide.Address == address.ToString()) {
 					return item.Value;
 				}
 			}
@@ -223,8 +223,15 @@ namespace Igor.TCP {
 				byte[] clientInfo = new byte[1024];
 
 				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
-				TCPClientInfo connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
-				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address()) {
+				TCPClientInfo connectedClientInfo;
+				try {
+					connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
+				}
+				catch (InvalidCastException) {
+					System.Diagnostics.Debug.WriteLine("Who are you!?");
+					continue;
+				}
+				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
 					ClientID = 0
 				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
@@ -242,7 +249,6 @@ namespace Igor.TCP {
 
 		private void ClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
 			OnClientDisconnected?.Invoke(this, e);
-			connectedClients.Remove(e.ClientInfo.ClientID);
 		}
 
 		private void DataIDs_OnRerouteRequest(object sender, DataReroutedEventArgs e) {

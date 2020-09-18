@@ -59,32 +59,44 @@ namespace Igor.TCP {
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
-			ClientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address());
+			ClientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address().ToString());
 		}
 
 		/// <summary>
-		/// Connect to server with specified IP and port
+		/// Connect to server with details provided in the constructor
 		/// </summary>
-		public void Connect(Action OnConnected) {
+		/// <param name="onConnected">Action to execute after successful connection.</param>
+		/// <param name="timeout">Optional timeout to end long connection attempts, defaults to <see cref="TimeSpan.FromSeconds(4)"/></param>
+		public void Connect(Action onConnected, TimeSpan? timeout = null, Action onTimedOut = null) {
 			TcpClient clientBase = new TcpClient();
-			clientBase.Connect(address, port);
-			byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
-			NetworkStream stream = clientBase.GetStream();
-			stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-			ClientInfo.ClientID = buffer[0];
+			IAsyncResult result = clientBase.BeginConnect(address, port, OnSuccess, null);
 
-			byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(ClientInfo);
+			var success = result.AsyncWaitHandle.WaitOne(timeout ?? TimeSpan.FromSeconds(4));
 
-			stream.Write(clientInfoArray, 0, clientInfoArray.Length);
+			if (!success) {
+				onTimedOut?.Invoke();
+			}
 
-			TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address) {
-				ClientID = 0
-			};
-			Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+			void OnSuccess(IAsyncResult asyncRes) {
+				clientBase.EndConnect(asyncRes);
+				byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
+				NetworkStream stream = clientBase.GetStream();
+				stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				ClientInfo.ClientID = buffer[0];
+
+				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(ClientInfo);
+
+				stream.Write(clientInfoArray, 0, clientInfoArray.Length);
+
+				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address.ToString()) {
+					ClientID = 0
+				};
+				Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
 #if DEBUG
-			Console.WriteLine("Connection Established");
+				Console.WriteLine("Connection Established");
 #endif
-			OnConnected?.Invoke();
+				onConnected?.Invoke();
+			}
 		}
 
 
@@ -93,7 +105,7 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
 		public TCPClientInfo SetUpClientInfo(string clientName) {
-			ClientInfo = new TCPClientInfo(clientName, false, address);
+			ClientInfo = new TCPClientInfo(clientName, false, address.ToString());
 			return ClientInfo;
 		}
 

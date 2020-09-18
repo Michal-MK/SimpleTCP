@@ -32,7 +32,7 @@ namespace Igor.TCP {
 			client2.Disconnect();
 
 			await Task.Delay(200);
-			await server.Stop();
+			server.Stop();
 
 			if(!(client1Disconnect && client2Disconnect)) {
 				throw new Exception("Disconnect invalid data returned");

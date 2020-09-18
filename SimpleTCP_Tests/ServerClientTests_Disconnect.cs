@@ -26,7 +26,7 @@ namespace Igor.TCP {
 			Assert.IsNull(client.Connection);
 			Assert.IsTrue(disconnectEvent);
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void Server_OnClientDisconnected(object sender, ClientDisconnectedEventArgs e) {

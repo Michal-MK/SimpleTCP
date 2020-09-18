@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -19,26 +20,29 @@ namespace Igor.TCP {
 
 			await server.Start(55550);
 
-			client1.Connect(null);
-			client2.Connect(null);
+			client1.Connect(OnClient1Connect);
+			client2.Connect(OnClient2Connect);
 
-			await Task.Delay(100);
-			Assert.IsTrue(client1.Connection != null);
-			Assert.IsTrue(client2.Connection != null);
+			void OnClient1Connect() {
+				Assert.IsTrue(client1.Connection != null);
+				Assert.IsTrue(server.ConnectedClients.Where(w => w.ClientID == client1.ClientInfo.ClientID).Single().IsServer == false);
+				Assert.IsTrue(server.ConnectedClients.Where(w => w.ClientID == client1.ClientInfo.ClientID).Single().Name == "Client 1");
+
+			}
+			void OnClient2Connect() {
+				Assert.IsTrue(client2.Connection != null);
+				Assert.IsTrue(server.ConnectedClients.Where(w => w.ClientID == client2.ClientInfo.ClientID).Single().IsServer == false);
+				Assert.IsTrue(server.ConnectedClients.Where(w => w.ClientID == client2.ClientInfo.ClientID).Single().Name == "Client 2");
+			}
+
+			await Task.Delay(200);
 			Assert.IsTrue(server.ConnectedClients.Length == 2);
-			Assert.IsTrue(server.ConnectedClients[0].IsServer == false);
-			Assert.IsTrue(server.ConnectedClients[0].ClientID == 1);
-			Assert.IsTrue(server.ConnectedClients[0].Name == "Client 1");
-			Assert.IsTrue(server.ConnectedClients[1].IsServer == false);
-			Assert.IsTrue(server.ConnectedClients[1].ClientID == 2);
-			Assert.IsTrue(server.ConnectedClients[1].Name == "Client 2");
-
 			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(0); });
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(3); });
 			Assert.IsNotNull(server.GetConnection(1));
 			Assert.IsNotNull(server.GetConnection(2));
 
-			await server.Stop();
+			server.Stop();
 		}
 	}
 }

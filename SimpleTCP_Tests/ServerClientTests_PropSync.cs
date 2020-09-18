@@ -15,9 +15,9 @@ namespace Igor.TCP {
 
 			TCPServer server = new TCPServer(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55552);
 
-			await server.Start(55550);
+			await server.Start(55552);
 			client.Connect(null);
 
 			await Task.Delay(200);
@@ -37,7 +37,7 @@ namespace Igor.TCP {
 			Assert.IsNotNull(clientPropertyPublic);
 			Assert.IsTrue(clientPropertyPublic[0] == "Hello" && clientPropertyPublic[1] == "Server");
 
-			await server.Stop();
+			server.Stop();
 		}
 		#endregion
 
@@ -55,9 +55,9 @@ namespace Igor.TCP {
 		public async Task SynchronizationEventClient() {
 			TCPServer server = new TCPServer(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55551);
 
-			await server.Start(55550);
+			await server.Start(55551);
 			client.Connect(null);
 
 			client.OnPropertySynchronized += Client_OnPropertySynchronized;
@@ -76,7 +76,7 @@ namespace Igor.TCP {
 				Assert.IsTrue(checks[i]);
 			}
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void Client_OnPropertySynchronized(object sender, OnPropertySynchronizationEventArgs e) {

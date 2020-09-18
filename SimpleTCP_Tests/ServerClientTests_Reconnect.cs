@@ -32,7 +32,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(server.GetConnection(1).SendingData);
 			Assert.IsTrue(server.GetConnection(1).ListeningForData);
 
-			await server.Stop();
+			server.Stop();
 		}
 	}
 }

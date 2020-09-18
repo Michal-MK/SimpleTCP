@@ -41,20 +41,19 @@ namespace Igor.TCP {
 				client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
 			});
 
+			server.OnClientConnected += (s, e) => {
+				server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);
+				server.DefineCustomPacket<MyClass>(1, 56, OnNd_C);
+				server.DefineCustomPacket<C2>(1, 57, OnRd_C);
+				server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
+				server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
 
-			server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);
-			server.DefineCustomPacket<MyClass>(1, 56, OnNd_C);
-			server.DefineCustomPacket<C2>(1, 57, OnRd_C);
-			server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
-			server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
-
-			await Task.Delay(200);
-
-			server.GetConnection(1).SendData(55, new TestStruct { a = 50 });
-			server.GetConnection(1).SendData(56, new MyClass());
-			server.GetConnection(1).SendData(57, new C2());
-			server.GetConnection(1).SendData(58, new Text<int>());
-			server.GetConnection(1).SendData(59, new List<MyClass>());
+				server.GetConnection(1).SendData(55, new TestStruct { a = 50 });
+				server.GetConnection(1).SendData(56, new MyClass());
+				server.GetConnection(1).SendData(57, new C2());
+				server.GetConnection(1).SendData(58, new Text<int>());
+				server.GetConnection(1).SendData(59, new List<MyClass>());
+			};
 
 			await Task.Delay(500);
 

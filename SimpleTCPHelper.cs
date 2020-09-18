@@ -49,7 +49,7 @@ namespace Igor.TCP {
 			if (obj is bool bo) {
 				bytes = BitConverter.GetBytes(bo);
 			}
-			else if(obj is byte by) {
+			else if (obj is byte by) {
 				bytes = new[] { by };
 			}
 			else if (obj is string str) {
@@ -133,9 +133,7 @@ namespace Igor.TCP {
 			}
 			else {
 				try {
-					using (MemoryStream ms = new MemoryStream()) {
-						ms.Write(bytes, 0, bytes.Length);
-						ms.Seek(0, SeekOrigin.Begin);
+					using (MemoryStream ms = new MemoryStream(bytes)) {
 						obj = bf.Deserialize(ms);
 					}
 				}

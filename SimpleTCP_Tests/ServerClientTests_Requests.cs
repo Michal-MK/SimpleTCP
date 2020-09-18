@@ -32,7 +32,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(resp2.GetType() == typeof(string));
 			Assert.IsTrue(resp2 == ServerString());
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private string ClientString() {

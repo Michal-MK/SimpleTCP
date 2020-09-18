@@ -29,7 +29,7 @@ namespace Igor.TCP {
 
 			client.Connection.SendData(81, 50d);
 
-			await server.Stop();
+			server.Stop();
 		}
 
 		private void OnPacketReceived(byte sender, (int,string) packet) {
