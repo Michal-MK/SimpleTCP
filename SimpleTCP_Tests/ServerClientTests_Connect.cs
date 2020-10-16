@@ -16,9 +16,12 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
-			client.Connect(null);
+			bool res = await client.ConnectAsync(1000);
 
-			await Task.Delay(100);
+			if (!res) {
+				Assert.Fail();
+				return;
+			}
 
 			Assert.IsTrue(clientConnectedEventFired);
 			Assert.IsTrue(server.ConnectedClients.Length == 1);

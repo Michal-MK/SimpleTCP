@@ -13,12 +13,8 @@ namespace Igor.TCP {
 			await server.Start(5656);
 			const byte PACKET_ID = 4;
 
-			client.Connect(() => {
-				client.ProvideValue(PACKET_ID, ClientString);
-			});
-
-			await Task.Delay(100);
-
+			await client.ConnectAsync(1000);
+			client.ProvideValue(PACKET_ID, ClientString);
 
 			server.ProvideValue(1, PACKET_ID, ServerString);
 

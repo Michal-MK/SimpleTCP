@@ -57,6 +57,11 @@ namespace Igor.TCP {
 		/// </summary>
 		public event EventHandler OnServerStarted;
 
+		/// <summary>
+		/// Called when the client attempts to join the server
+		/// </summary>
+		public Func<TCPClientInfo, bool> OcClientConnectionAttempt { get; set; } = (info) => true;
+
 
 		/// <summary>
 		/// Create new <see cref="TCPServer"/>
@@ -102,16 +107,14 @@ namespace Igor.TCP {
 		/// Actual server starting function
 		/// </summary>
 		/// <exception cref="ServerStartException"></exception>
-		private Task StartServer(IPAddress address, ushort port) {
+		private async Task StartServer(IPAddress address, ushort port) {
 			currentPort = port;
 			try {
-				return Task.Run(() => {
-					Console.WriteLine(address);
-					listenForClientConnections = true;
-					new Thread(new ThreadStart(delegate () { ListenForClientConnection(address, port); })) { Name = "Client Connection Listener", IsBackground = true }.Start();
-					serverStartEvnt.Wait();
-					OnServerStarted?.Invoke(this, EventArgs.Empty);
-				});
+				System.Diagnostics.Debug.WriteLine(address);
+				listenForClientConnections = true;
+				_ = Task.Run(() => ListenForClientConnection(address, port));
+				await Task.Run(serverStartEvnt.Wait);
+				OnServerStarted?.Invoke(this, EventArgs.Empty);
 			}
 			catch {
 				throw new ServerStartException("Unable to start server at " + address.ToString() + ":" + port);
@@ -193,7 +196,7 @@ namespace Igor.TCP {
 			}
 			set {
 				if (!listenForClientConnections && value) {
-					StartServer(currentAddress, currentPort);
+					_ = StartServer(currentAddress, currentPort);
 				}
 				if (!value) {
 					clientConnectionListener.Stop();
@@ -202,14 +205,14 @@ namespace Igor.TCP {
 			}
 		}
 
-		private void ListenForClientConnection(IPAddress address, ushort port) {
+		private async Task ListenForClientConnection(IPAddress address, ushort port) {
 			clientConnectionListener = new TcpListener(address, port);
 			clientConnectionListener.Start();
 			serverStartEvnt.Set();
-			TcpClient newlyConnected = null;
 			while (listenForClientConnections) {
+				TcpClient newlyConnected = null;
 				try {
-					newlyConnected = clientConnectionListener.AcceptTcpClient();
+					newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
 				}
 				catch (SocketException e) {
 					if (e.SocketErrorCode == SocketError.Interrupted) {
@@ -217,20 +220,53 @@ namespace Igor.TCP {
 						return;
 					}
 				}
-				byte ID = (byte)(connectedClients.Count + 1);
-				NetworkStream newStream = newlyConnected.GetStream();
-				newStream.Write(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-				byte[] clientInfo = new byte[1024];
 
-				int bytesRead = newStream.Read(clientInfo, 0, clientInfo.Length);
+				byte ID = (byte)(connectedClients.Count + 1); //TODO can overflow
+
+				NetworkStream newStream = newlyConnected.GetStream();
+
+				try {
+					await newStream.WriteAsync(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				}
+				catch {
+					continue;
+				}
+
+				byte[] packetHeader = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
+				
+				int bytesRead = 0;
+				try {
+					bytesRead = await newStream.ReadAsync(packetHeader, 0, packetHeader.Length);
+				}
+				catch {
+					continue;
+				}
+
+				long packetLength = BitConverter.ToInt64(packetHeader, 0);
+
+				byte[] clientInfo = new byte[packetLength];
+				int pos = 0;
+
+				try {
+					while (pos != clientInfo.Length) {
+						bytesRead = await newStream.ReadAsync(clientInfo, pos, clientInfo.Length);
+						pos += bytesRead;
+					}
+				}
+				catch {
+					continue;
+				}
+
 				TCPClientInfo connectedClientInfo;
 				try {
 					connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
 				}
-				catch (InvalidCastException) {
-					System.Diagnostics.Debug.WriteLine("Who are you!?");
+				catch {
+					System.Diagnostics.Debug.WriteLine("Who are you!? Failed Handshake! -> Dropping connection");
 					continue;
 				}
+
+
 				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
 					ClientID = 0
 				};
@@ -238,8 +274,20 @@ namespace Igor.TCP {
 				conn.dataIDs.rerouter = this;
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
-				connectedClients.Add(ID, conn);
-				OnClientConnected?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
+				bool accepted = OcClientConnectionAttempt(connectedClientInfo);
+				if (accepted) {
+					try {
+						await newStream.WriteAsync(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+						connectedClients.Add(ID, conn);
+						OnClientConnected?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
+					}
+					catch {
+						continue;
+					}
+				}
+				else {
+					newStream.Write(new byte[] { byte.MaxValue }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				}
 			}
 		}
 

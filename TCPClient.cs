@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Microsoft.Win32.SafeHandles;
+using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -62,40 +64,58 @@ namespace Igor.TCP {
 			ClientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address().ToString());
 		}
 
-		/// <summary>
-		/// Connect to server with details provided in the constructor
-		/// </summary>
-		/// <param name="onConnected">Action to execute after successful connection.</param>
-		/// <param name="timeout">Optional timeout to end long connection attempts, defaults to <see cref="TimeSpan.FromSeconds(4)"/></param>
-		public void Connect(Action onConnected, TimeSpan? timeout = null, Action onTimedOut = null) {
+		public async Task<bool> ConnectAsync(int timeout) {
 			TcpClient clientBase = new TcpClient();
-			IAsyncResult result = clientBase.BeginConnect(address, port, OnSuccess, null);
+			try {
+				Task t1 = Task.Run(async () => await clientBase.ConnectAsync(address, port));
+				Task t2 = Task.Delay(timeout);
+				await Task.WhenAny(t1, t2);
 
-			var success = result.AsyncWaitHandle.WaitOne(timeout ?? TimeSpan.FromSeconds(4));
+				if (t2.Status == TaskStatus.RanToCompletion &&
+					(t1.Status == TaskStatus.Faulted || t1.Status == TaskStatus.Canceled || t1.Status == TaskStatus.Running || t1.Status == TaskStatus.WaitingForActivation)) {
+					return false;
+				}
+				else {
+					await t1;
+				}
 
-			if (!success) {
-				onTimedOut?.Invoke();
-			}
-
-			void OnSuccess(IAsyncResult asyncRes) {
-				clientBase.EndConnect(asyncRes);
 				byte[] buffer = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
+
 				NetworkStream stream = clientBase.GetStream();
-				stream.Read(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-				ClientInfo.ClientID = buffer[0];
+				await stream.ReadAsync(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+
+				ClientInfo.ClientID = buffer[0]; // TODO smarter if length != 1
 
 				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(ClientInfo);
+				byte[] header = BitConverter.GetBytes(clientInfoArray.LongLength);
+				byte[] data = new byte[header.Length + clientInfoArray.Length];
+				header.CopyTo(data, 0);
+				clientInfoArray.CopyTo(data, header.Length);
 
-				stream.Write(clientInfoArray, 0, clientInfoArray.Length);
+				await stream.WriteAsync(data, 0, data.Length);
 
 				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address.ToString()) {
 					ClientID = 0
 				};
-				Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+
+				await stream.ReadAsync(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+				bool accepted = buffer[0] == ClientInfo.ClientID;
+
+				if (accepted) {
+					Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+				}
 #if DEBUG
-				Console.WriteLine("Connection Established");
+				if (accepted) {
+					Console.WriteLine("Connection Established");
+				}
+				else {
+					Console.WriteLine("Connection Rejected");
+				}
 #endif
-				onConnected?.Invoke();
+				return accepted;
+			}
+			catch {
+				return false;
 			}
 		}
 
@@ -150,7 +170,7 @@ namespace Igor.TCP {
 		/// <exception cref="NoResponseException"></exception>
 		public async Task<T> GetValue<T>(byte packetID) {
 			TCPResponse resp = await Connection.requestCreator.Request(packetID, typeof(T));
-			if(resp.DataType == typeof(NoResponseException)) {
+			if (resp.DataType == typeof(NoResponseException)) {
 				throw new NoResponseException(resp);
 			}
 			return (T)resp.GetObject;

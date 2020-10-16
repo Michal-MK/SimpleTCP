@@ -33,14 +33,6 @@ namespace Igor.TCP {
 
 			await server.Start(4245);
 
-			client.Connect(() => {
-				client.DefineCustomPacket<TestStruct>(55, OnSt_C);
-				client.DefineCustomPacket<MyClass>(56, OnNd_C);
-				client.DefineCustomPacket<C2>(57, OnRd_C);
-				client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
-				client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
-			});
-
 			server.OnClientConnected += (s, e) => {
 				server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);
 				server.DefineCustomPacket<MyClass>(1, 56, OnNd_C);
@@ -48,14 +40,24 @@ namespace Igor.TCP {
 				server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
 				server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
 
-				server.GetConnection(1).SendData(55, new TestStruct { a = 50 });
-				server.GetConnection(1).SendData(56, new MyClass());
-				server.GetConnection(1).SendData(57, new C2());
-				server.GetConnection(1).SendData(58, new Text<int>());
-				server.GetConnection(1).SendData(59, new List<MyClass>());
+				server.GetConnection(e.ClientInfo.ClientID).SendData(55, new TestStruct { a = 50 });
+				server.GetConnection(e.ClientInfo.ClientID).SendData(56, new MyClass());
+				server.GetConnection(e.ClientInfo.ClientID).SendData(57, new C2());
+				server.GetConnection(e.ClientInfo.ClientID).SendData(58, new Text<int>());
+				server.GetConnection(e.ClientInfo.ClientID).SendData(59, new List<MyClass>());
 			};
 
-			await Task.Delay(500);
+			bool res = await client.ConnectAsync(1000);
+			if (!res) {
+				Assert.Fail();
+			}
+			client.DefineCustomPacket<TestStruct>(55, OnSt_C);
+			client.DefineCustomPacket<MyClass>(56, OnNd_C);
+			client.DefineCustomPacket<C2>(57, OnRd_C);
+			client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
+			client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
+
+			await Task.Delay(400);
 
 			Assert.IsTrue(matches == 5);
 		}

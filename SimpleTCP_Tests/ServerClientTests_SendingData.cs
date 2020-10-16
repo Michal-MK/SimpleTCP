@@ -16,20 +16,16 @@ namespace Igor.TCP {
 			await server.Start(55550);
 			const byte PACKET_ID = 4;
 
-			client.Connect(() => {
-				client.DefineCustomPacket(PACKET_ID, (byte sender, byte value) => {
-					Assert.IsTrue(value == sentByte);
-				});
+			await client.ConnectAsync(1000);
+			client.DefineCustomPacket(PACKET_ID, (byte sender, byte value) => {
+				Assert.IsTrue(value == sentByte);
 			});
 
-			await Task.Delay(100);
-
-			server.DefineCustomPacket(1, PACKET_ID, (byte sender, byte value) => 
-			{ Assert.IsTrue(value == sentByte); });
+			server.DefineCustomPacket(1, PACKET_ID, (byte sender, byte value) => { Assert.IsTrue(value == sentByte); });
 
 			client.Connection.SendData(PACKET_ID, sentByte);
 
-			server.GetConnection(1).SendData(PACKET_ID,sentByte);
+			server.GetConnection(1).SendData(PACKET_ID, sentByte);
 
 			await Task.Delay(100);
 

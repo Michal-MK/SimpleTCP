@@ -18,9 +18,7 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55552);
 
 			await server.Start(55552);
-			client.Connect(null);
-
-			await Task.Delay(200);
+			await client.ConnectAsync(1000);
 
 			const byte PROP_ID = 4;
 
@@ -58,11 +56,9 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55551);
 
 			await server.Start(55551);
-			client.Connect(null);
+			await client.ConnectAsync(1000);
 
 			client.OnPropertySynchronized += Client_OnPropertySynchronized;
-
-			await Task.Delay(200);
 
 			server.SyncProperty(1, this, nameof(myProp), SYNC_ID);
 

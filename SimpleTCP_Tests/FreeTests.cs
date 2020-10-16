@@ -20,7 +20,7 @@ namespace Igor.TCP {
 
 
 			TCPClient client = new TCPClient(IPAddress.Loopback, 8998);
-			client.Connect(null);
+			await client.ConnectAsync(1000);
 
 			await Task.Delay(200);
 

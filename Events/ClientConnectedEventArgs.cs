@@ -7,8 +7,8 @@ namespace Igor.TCP {
 	public class ClientConnectedEventArgs : EventArgs {
 
 		internal ClientConnectedEventArgs(TCPServer myServer, TCPClientInfo clientInfo) {
-			this.Server = myServer;
-			this.ClientInfo = clientInfo;
+			Server = myServer;
+			ClientInfo = clientInfo;
 		}
 
 		/// <summary>

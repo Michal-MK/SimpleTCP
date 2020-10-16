@@ -21,19 +21,14 @@ namespace Igor.TCP {
 			await server.Start(55550);
 			const byte PACKET = 4;
 
-			client1.Connect(() => {
-				client1.DefineCustomPacket<string[]>(PACKET, OnMyStringArrayReceived);
-			});
-			client2.Connect(() => {
-				client2.DefineCustomPacket<string[]>(PACKET, OnClientStringsReceived);
-			});
+			await client1.ConnectAsync(1000);
+			client1.DefineCustomPacket<string[]>(PACKET, OnMyStringArrayReceived);
 
-			await Task.Delay(100);
-
+			await client2.ConnectAsync(1000);
+			client2.DefineCustomPacket<string[]>(PACKET, OnClientStringsReceived);
 
 			server.DefineCustomPacket<string[]>(1, PACKET, OnServerReceivedStringArray);
 			server.DefineRerouteID(1,2, PACKET);
-
 
 			await Task.Delay(100);
 

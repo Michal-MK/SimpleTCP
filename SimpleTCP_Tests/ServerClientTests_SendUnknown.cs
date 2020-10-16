@@ -14,13 +14,11 @@ namespace Igor.TCP {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
-			client.Connect(null);
-
-			await Task.Delay(100);
+			await client.ConnectAsync(1000);
 
 			client.Connection.SendData(64, (byte)50);
 
-			await Task.Delay(100);
+			await Task.Delay(200);
 
 			Assert.IsTrue(SendUnknownEventSuccess);
 		}

@@ -36,7 +36,7 @@ namespace Igor.TCP {
 				if (IsValid) {
 					return clientID;
 				}
-				throw new InvalidOperationException("Client has not been given an ID yet");
+				throw new InvalidOperationException("Client has not been given an ID yet!");
 			}
 			internal set {
 				clientID = value;

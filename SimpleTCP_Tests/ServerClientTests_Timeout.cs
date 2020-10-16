@@ -7,22 +7,12 @@ namespace Igor.TCP {
 
 	public partial class ServerClientTests {
 
-		private bool timedOut = false;
-
 		[TestMethod]
 		public async Task Timeout() {
 			TCPClient client = new TCPClient(new ConnectionData("192.168.1.222", 6544));
-			client.Connect(OnConnected, TimeSpan.FromSeconds(0.5), TimedOut);
+			bool res = await client.ConnectAsync(2000);
 
-			void OnConnected() {
-				Assert.Fail();
-			}
-			await Task.Delay(1000);
-			Assert.IsTrue(timedOut);
-		}
-
-		private void TimedOut() {
-			timedOut = true;
+			if (res) { Assert.Fail(); }
 		}
 	}
 }

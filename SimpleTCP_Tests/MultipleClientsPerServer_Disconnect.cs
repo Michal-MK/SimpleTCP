@@ -22,16 +22,16 @@ namespace Igor.TCP {
 
 			await server.Start(55550);
 
-			client1.Connect(null);
-			client2.Connect(null);
+			Task t1 = Task.Run(() => client1.ConnectAsync(1000));
+			Task t2 = Task.Run(() => client2.ConnectAsync(1000));
 
-			await Task.Delay(100);
+			await Task.WhenAll(t1, t2);
 
 			client1.Disconnect();
-			await Task.Delay(400);
+			await Task.Delay(200);
 			client2.Disconnect();
 
-			await Task.Delay(200);
+			await Task.Delay(100);
 			server.Stop();
 
 			if(!(client1Disconnect && client2Disconnect)) {

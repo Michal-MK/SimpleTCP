@@ -183,6 +183,7 @@ namespace Igor.TCP {
 			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = item.OriginClientID; //Append senderID
 			item.RawData.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY); //Append the data
 			mainNetworkStream.Write(merged, 0, merged.Length);
+			//TODO socket shutdown
 		}
 
 		#endregion
@@ -339,7 +340,7 @@ namespace Igor.TCP {
 
 		#region Helpers for getting senderID and packetID from byte[]
 
-		private byte GetSenderID(byte[] fromClient) {
+		internal static byte GetSenderID(byte[] fromClient) {
 			if (DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY != 1) {
 #pragma warning disable CS0162 // Unreachable code detected
 				Debugger.Break();
@@ -349,7 +350,7 @@ namespace Igor.TCP {
 			return fromClient[0];
 		}
 
-		private byte GetPacketID(byte[] packetID) {
+		internal static byte GetPacketID(byte[] packetID) {
 			if (DataIDs.PACKET_ID_COMPLEXITY != 1) {
 #pragma warning disable CS0162 // Unreachable code detected
 				Debugger.Break();
@@ -372,6 +373,9 @@ namespace Igor.TCP {
 		protected virtual void Dispose(bool disposing) {
 			if (!disposedValue) {
 				requestCreator.Dispose();
+				SendingData = false;
+				evnt.Set();
+				ListeningForData = false;
 				baseClient.Close();
 				baseClient.Dispose();
 				disposedValue = true;
