@@ -134,6 +134,18 @@ namespace Igor.TCP {
 		}
 
 
+		/// <exception cref="InvalidOperationException">When the ID is not connected</exception>
+		public void DisconnectClient(byte clientID) {
+			try {
+				ServerToClientConnection a = connectedClients.Values.Where(s => s.infoAboutOtherSide.ClientID == clientID).Single();
+				a.DisconnectClient(clientID);
+			}
+			catch {
+				throw new InvalidOperationException("Client with id: " + clientID + " is not connected!");
+			}
+		}
+
+
 		#endregion
 
 		#region Getting connections to the server
@@ -190,7 +202,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Set listening for incoming client connection attempts
 		/// </summary>
-		public bool isListeningForClients {
+		public bool IsListeningForClients {
 			get {
 				return listenForClientConnections;
 			}
@@ -233,7 +245,7 @@ namespace Igor.TCP {
 				}
 
 				byte[] packetHeader = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
-				
+
 				int bytesRead = 0;
 				try {
 					bytesRead = await newStream.ReadAsync(packetHeader, 0, packetHeader.Length);
@@ -263,6 +275,7 @@ namespace Igor.TCP {
 				}
 				catch {
 					System.Diagnostics.Debug.WriteLine("Who are you!? Failed Handshake! -> Dropping connection");
+					newlyConnected.Dispose();
 					continue;
 				}
 

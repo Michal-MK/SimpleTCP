@@ -60,6 +60,7 @@
     <Compile Include="MultipleClientsPerServer_Connect.cs" />
     <Compile Include="PingerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServerClientTests_Kick.cs" />
     <Compile Include="ServerClientTests_Connect.cs" />
     <Compile Include="ServerClientTests_SendingData.cs" />
     <Compile Include="ServerClientTests_Disconnect.cs" />

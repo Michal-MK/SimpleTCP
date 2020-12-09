@@ -6,8 +6,8 @@
         <Company>Michal-MK</Company>
         <Product>Simple TCP</Product>
         <PackageId>Igor.SimpleTCP</PackageId>
-        <Version>1.0.4</Version>
-        <Description>Simple to use TCP library with direct string and int transmission</Description>
+        <Version>1.0.5</Version>
+        <Description>Simple to use TCP library with direct string and int transmission, along with custom type packet definition.</Description>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
     </PropertyGroup>
     <ItemGroup>

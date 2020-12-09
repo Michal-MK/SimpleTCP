@@ -159,7 +159,7 @@ namespace Igor.TCP {
 
 		#region Queue sending
 
-		private ManualResetEventSlim evnt;
+		protected ManualResetEventSlim evnt;
 
 		internal void SendDataFromQueue() {
 			using (evnt = new ManualResetEventSlim()) {

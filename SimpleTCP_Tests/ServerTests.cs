@@ -19,7 +19,7 @@ namespace Igor.TCP {
 
 			await server.Start(65000);
 
-			Assert.IsTrue(server.isListeningForClients);
+			Assert.IsTrue(server.IsListeningForClients);
 			Assert.IsTrue(server.ConnectedClients.Length == 0);
 			Assert.IsTrue(eventFired);
 
@@ -27,7 +27,7 @@ namespace Igor.TCP {
 
 			server.Stop();
 
-			Assert.IsFalse(server.isListeningForClients);
+			Assert.IsFalse(server.IsListeningForClients);
 			Assert.IsTrue(server.ConnectedClients.Length == 0);
 		}
 

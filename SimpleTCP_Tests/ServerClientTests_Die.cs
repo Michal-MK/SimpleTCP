@@ -19,17 +19,17 @@ namespace Igor.TCP {
 
 			await Task.Delay(500);
 			byte clientID = client.ClientInfo.ClientID;
-			client.Connection.Dispose();
+			client.Dispose();
 
 			await Task.Delay(500);
 
 			s.SendToAll(50);
-			await Task.Delay(100000);
+			await Task.Delay(2000);
 			s.GetConnection(clientID).SendData(50);
-			await Task.Delay(100000);
+			await Task.Delay(2000);
 			s.GetConnection(clientID).SendData(50);
-			await Task.Delay(100000);
-			s.GetConnection(clientID).SendData(50);
+			await Task.Delay(2000);
+			s.SendToAll(50);
 			await Task.Delay(100);
 
 			s.Stop();

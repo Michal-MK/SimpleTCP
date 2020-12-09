@@ -10,7 +10,7 @@ namespace Igor.TCP {
 	/// <summary>
 	/// Client that can connect to a TCPServer
 	/// </summary>
-	public class TCPClient : IValueProvider {
+	public class TCPClient : IValueProvider, IDisposable {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
@@ -30,6 +30,11 @@ namespace Igor.TCP {
 		/// Event called whenever a synchronization packet is received
 		/// </summary>
 		public event EventHandler<OnPropertySynchronizationEventArgs> OnPropertySynchronized;
+
+		/// <summary>
+		/// Event called whenever server disconnects this client
+		/// </summary>
+		public event EventHandler OnClientDisconnected;
 
 		/// <summary>
 		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
@@ -103,6 +108,7 @@ namespace Igor.TCP {
 
 				if (accepted) {
 					Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+					Connection._OnClientKickedFromServer += OnClientDisconnected;
 				}
 #if DEBUG
 				if (accepted) {
@@ -204,6 +210,10 @@ namespace Igor.TCP {
 
 		internal void InvokeOnPropertySync(ClientToServerConnection con, OnPropertySynchronizationEventArgs args) {
 			OnPropertySynchronized?.Invoke(con, args);
+		}
+
+		public void Dispose() {
+			Connection?.Dispose();
 		}
 	}
 }

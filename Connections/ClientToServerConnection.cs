@@ -28,8 +28,8 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="data"></param>
 		protected override void HigherLevelDataReceived(ReceivedData data) {
-			if (data.DataType == typeof(ClientDisconnectedPacket)) {
-				_OnClientKickedFromServer?.Invoke(this, EventArgs.Empty);
+			if (data.DataID == DataIDs.ClientDisconnected) {
+				_OnClientKickedFromServer?.Invoke(client, EventArgs.Empty);
 			}
 			if (data.DataType == typeof(OnPropertySynchronizationEventArgs)) {
 				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
