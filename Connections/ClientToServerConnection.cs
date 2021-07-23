@@ -19,7 +19,7 @@ namespace Igor.TCP {
 		/// Disconnect and let server know that this client is disconnecting
 		/// </summary>
 		public void DisconnectFromServer(byte myID) {
-			SendDataImmediate(DataIDs.ClientDisconnected, SimpleTCPHelper.GetBytesFromObject(myInfo));
+			SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, SimpleTCPHelper.GetBytesFromObject(myInfo));
 			Dispose();
 		}
 
@@ -28,7 +28,7 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="data"></param>
 		protected override void HigherLevelDataReceived(ReceivedData data) {
-			if (data.DataID == DataIDs.ClientDisconnected) {
+			if (data.DataID == DataIDs.CLIENT_DISCONNECTED) {
 				_OnClientKickedFromServer?.Invoke(client, EventArgs.Empty);
 			}
 			if (data.DataType == typeof(OnPropertySynchronizationEventArgs)) {

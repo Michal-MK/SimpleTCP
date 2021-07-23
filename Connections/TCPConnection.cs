@@ -13,7 +13,8 @@ namespace Igor.TCP {
 	/// </summary>
 	public class TCPConnection : IDisposable {
 
-		#region Public Properties and fields
+		#region Public Properties
+
 		/// <summary>
 		/// Is client listening for incoming data
 		/// </summary>
@@ -25,7 +26,7 @@ namespace Igor.TCP {
 		public bool SendingData { get; internal set; } = true;
 
 		/// <summary>
-		/// Called when successfully received data by <see cref="DataIDs.StringID"></see> marked packet
+		/// Called when successfully received data by <see cref="DataIDs.STRING_ID"></see> marked packet
 		/// </summary>
 		public event EventHandler<PacketReceivedEventArgs<string>> OnStringReceived;
 
@@ -46,44 +47,41 @@ namespace Igor.TCP {
 
 		#endregion
 
-		#region Internal and private properties/fields
+		#region Internal and private fields
 
-		internal TcpClient baseClient;
-		internal NetworkStream mainNetworkStream;
+		private readonly TcpClient baseClient;
+		private readonly NetworkStream mainNetworkStream;
 
-		internal event EventHandler<TCPResponse> _OnResponse;
+		private readonly Queue<SendQueueItem> queuedData;
 
-		internal Thread senderThread;
-		internal Thread receiverThread;
+		internal event EventHandler<TCPResponse> OnResponse;
 
-		internal TCPClientInfo myInfo;
-		internal TCPClientInfo infoAboutOtherSide;
+		internal readonly TCPClientInfo myInfo;
+		internal readonly TCPClientInfo infoAboutOtherSide;
 
-		internal RequestCreator requestCreator;
-		internal Queue<SendQueueItem> queuedData = new Queue<SendQueueItem>();
+		internal readonly RequestCreator requestCreator;
 
 		internal readonly DataIDs dataIDs;
 
-		internal IValueProvider valueProvider;
+		internal readonly IValueProvider valueProvider;
+
 		#endregion
 
 		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide, IValueProvider valueProvider) {
 			this.infoAboutOtherSide = infoAboutOtherSide;
 			this.myInfo = myInfo;
 			this.baseClient = baseClient;
+			this.valueProvider = valueProvider;
+			queuedData = new Queue<SendQueueItem>();
 
 			mainNetworkStream = baseClient.GetStream();
 			dataIDs = new DataIDs(this);
 
-			senderThread = new Thread(new ThreadStart(SendDataFromQueue)) { Name = $"Owner:{myInfo.Name}, IsClient={myInfo.IsClient} Sender Thread" };
-			senderThread.Start();
-			receiverThread = new Thread(new ThreadStart(DataReception)) { Name = $"Owner:{myInfo.Name}, IsClient={myInfo.IsClient} Receiver Thread" };
-			receiverThread.Start();
+			new Thread(SendDataFromQueue) { Name = $"Owner:{myInfo.Name}, IsClient={myInfo.IsClient} Sender Thread" }.Start();
+			new Thread(DataReception) { Name = $"Owner:{myInfo.Name}, IsClient={myInfo.IsClient} Receiver Thread" }.Start();
 
 			requestCreator = new RequestCreator(this);
 			ResponseGenerator = new RequestHandler(this);
-
-			this.valueProvider = valueProvider;
 		}
 
 		#region Send Primitives (string and long)
@@ -92,11 +90,11 @@ namespace Igor.TCP {
 		/// Send UTF-8 encoded string to connected device
 		/// </summary>
 		public void SendData(string data) {
-			byte[] bytes = System.Text.Encoding.UTF8.GetBytes(data);
+			byte[] bytes = Encoding.UTF8.GetBytes(data);
 #if DEBUG
 			Console.WriteLine("Sending data of type string of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 #endif
-			SendData(DataIDs.StringID, myInfo.ClientID, bytes);
+			SendData(DataIDs.STRING_ID, myInfo.ID, bytes);
 		}
 
 		/// <summary>
@@ -107,7 +105,7 @@ namespace Igor.TCP {
 #if DEBUG
 			Console.WriteLine("Sending data of type Int64 of length {0}", bytes.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY);
 #endif
-			SendData(DataIDs.Int64ID, myInfo.ClientID, bytes);
+			SendData(DataIDs.INT64_ID, myInfo.ID, bytes);
 		}
 
 		#endregion
@@ -116,7 +114,7 @@ namespace Igor.TCP {
 		/// Send a single byte to the connected device
 		/// </summary>
 		internal void SendData(byte packetID, byte requestID) {
-			SendData(packetID, myInfo.ClientID, new byte[1] { requestID });
+			SendData(packetID, myInfo.ID, new byte[1] { requestID });
 		}
 
 		/// <summary>
@@ -135,7 +133,7 @@ namespace Igor.TCP {
 			if (!dataIDs.customIDs.ContainsKey(packetID)) {
 				throw new NotImplementedException("Trying to send data with " + packetID + ", but this data was not defined!");
 			}
-			SendData(packetID, myInfo.ClientID, data);
+			SendData(packetID, myInfo.ID, data);
 		}
 
 		/// <summary>
@@ -147,14 +145,14 @@ namespace Igor.TCP {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
 			}
-			SendData(packetID, myInfo.ClientID, SimpleTCPHelper.GetBytesFromObject(data));
+			SendData(packetID, myInfo.ID, SimpleTCPHelper.GetBytesFromObject(data));
 		}
 
 		/// <summary>
 		/// Send data immediately on current thread
 		/// </summary>
 		internal void SendDataImmediate(byte packetID, byte[] data) {
-			SendData(new SendQueueItem(packetID, myInfo.ClientID, data));
+			SendData(new SendQueueItem(packetID, myInfo.ID, data));
 		}
 
 		#region Queue sending
@@ -183,6 +181,7 @@ namespace Igor.TCP {
 			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = item.OriginClientID; //Append senderID
 			item.RawData.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY); //Append the data
 			mainNetworkStream.Write(merged, 0, merged.Length);
+
 			//TODO socket shutdown
 		}
 
@@ -245,10 +244,10 @@ namespace Igor.TCP {
 					continue;
 				}
 
-				if (data.DataID == DataIDs.ResponseReceptionID) {
-					_OnResponse(this, (TCPResponse)data.ReceivedObject);
+				if (data.DataID == DataIDs.RESPONSE_RECEPTION_ID) {
+					OnResponse?.Invoke(this, (TCPResponse)data.ReceivedObject);
 				}
-				else if (data.DataID == DataIDs.RequestReceptionID) {
+				else if (data.DataID == DataIDs.REQUEST_RECEPTION_ID) {
 					continue;
 				}
 				else {
@@ -312,15 +311,16 @@ namespace Igor.TCP {
 			Type dataType = dataIDs.IdentifyID(packetIDSingle, senderID, data);
 			object dataObject;
 
-			if (packetIDSingle == DataIDs.StringID) {
+			if (packetIDSingle == DataIDs.STRING_ID) {
 				dataObject = Encoding.UTF8.GetString(data);
 			}
-			else if (packetIDSingle == DataIDs.Int64ID) {
+			else if (packetIDSingle == DataIDs.INT64_ID) {
 				dataObject = BitConverter.ToInt64(data, 0);
 			}
 			else if (dataType == typeof(TCPResponse)) {
-				dataObject = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]));
-				Array.Copy(data, 1, (dataObject as TCPResponse).RawData, 0, (dataObject as TCPResponse).RawData.Length);
+				TCPResponse resp;
+				dataObject = resp = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]));
+				Array.Copy(data, 1, resp.RawData, 0, resp.RawData.Length);
 			}
 			else if (dataType == typeof(TCPRequest)) {
 				dataObject = data[0];
@@ -365,6 +365,7 @@ namespace Igor.TCP {
 		#endregion
 
 		#region IDisposable Support
+
 		private bool disposedValue = false; // To detect redundant calls
 
 		/// <summary>
@@ -388,7 +389,7 @@ namespace Igor.TCP {
 		public void Dispose() {
 			Dispose(true);
 		}
+
 		#endregion
 	}
 }
-

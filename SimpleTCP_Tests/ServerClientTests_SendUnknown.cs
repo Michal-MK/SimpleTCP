@@ -24,7 +24,7 @@ namespace Igor.TCP {
 		}
 
 		private void Server_OnClientConnected(object sender, ClientConnectedEventArgs e) {
-			e.Server.GetConnection(e.ClientInfo.ClientID).OnUndefinedPacketReceived += ServerClientTests_OnUndefinedPacketReceived;
+			e.Server.GetConnection(e.ClientInfo.ID).OnUndefinedPacketReceived += ServerClientTests_OnUndefinedPacketReceived;
 		}
 
 		private void ServerClientTests_OnUndefinedPacketReceived(object sender, UndefinedPacketEventArgs e) {

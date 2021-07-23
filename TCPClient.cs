@@ -1,8 +1,6 @@
-﻿using Microsoft.Win32.SafeHandles;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 
@@ -19,7 +17,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Information about this client
 		/// </summary>
-		public TCPClientInfo ClientInfo { get; set; }
+		public TCPClientInfo Info { get; set; }
 
 		/// <summary>
 		/// Get connection to the server, allows client to server communication, holds send and receive functionality
@@ -66,7 +64,7 @@ namespace Igor.TCP {
 			else {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
-			ClientInfo = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address().ToString());
+			Info = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address().ToString());
 		}
 
 		public async Task<bool> ConnectAsync(int timeout) {
@@ -89,9 +87,9 @@ namespace Igor.TCP {
 				NetworkStream stream = clientBase.GetStream();
 				await stream.ReadAsync(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 
-				ClientInfo.ClientID = buffer[0]; // TODO smarter if length != 1
+				Info.ID = buffer[0]; // TODO smarter if length != 1
 
-				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(ClientInfo);
+				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(Info);
 				byte[] header = BitConverter.GetBytes(clientInfoArray.LongLength);
 				byte[] data = new byte[header.Length + clientInfoArray.Length];
 				header.CopyTo(data, 0);
@@ -100,14 +98,14 @@ namespace Igor.TCP {
 				await stream.WriteAsync(data, 0, data.Length);
 
 				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address.ToString()) {
-					ClientID = 0
+					ID = 0
 				};
 
 				await stream.ReadAsync(buffer, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
-				bool accepted = buffer[0] == ClientInfo.ClientID;
+				bool accepted = buffer[0] == Info.ID;
 
 				if (accepted) {
-					Connection = new ClientToServerConnection(clientBase, ClientInfo, serverInfo, this);
+					Connection = new ClientToServerConnection(clientBase, Info, serverInfo, this);
 					Connection._OnClientKickedFromServer += OnClientDisconnected;
 				}
 #if DEBUG
@@ -131,8 +129,8 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <param name="clientName">If left empty Current user name is used</param>
 		public TCPClientInfo SetUpClientInfo(string clientName) {
-			ClientInfo = new TCPClientInfo(clientName, false, address.ToString());
-			return ClientInfo;
+			Info = new TCPClientInfo(clientName, false, address.ToString());
+			return Info;
 		}
 
 
@@ -140,7 +138,7 @@ namespace Igor.TCP {
 		/// Set listening for incoming data from the server
 		/// </summary>
 		public bool IsListeningForData {
-			get { return Connection.ListeningForData; }
+			get => Connection.ListeningForData;
 			set {
 				if (Connection.ListeningForData == value) {
 					return;
@@ -200,7 +198,7 @@ namespace Igor.TCP {
 		/// <exception cref="NullReferenceException"></exception>
 		public void Disconnect() {
 			if (Connection != null) {
-				Connection.DisconnectFromServer(ClientInfo.ClientID);
+				Connection.DisconnectFromServer(Info.ID);
 				Connection = null;
 			}
 			else {

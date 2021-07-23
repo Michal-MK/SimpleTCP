@@ -60,7 +60,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Called when the client attempts to join the server
 		/// </summary>
-		public Func<TCPClientInfo, bool> OcClientConnectionAttempt { get; set; } = (info) => true;
+		public Func<TCPClientInfo, bool> OnClientConnectionAttempt { get; } = info => true;
 
 
 		/// <summary>
@@ -128,7 +128,7 @@ namespace Igor.TCP {
 			listenForClientConnections = false;
 			clientConnectionListener.Stop();
 			foreach (ServerToClientConnection connection in connectedClients.Values) {
-				connection.DisconnectClient(connection.infoAboutOtherSide.ClientID);
+				connection.DisconnectClient(connection.infoAboutOtherSide.ID);
 			}
 			connectedClients.Clear();
 		}
@@ -137,7 +137,7 @@ namespace Igor.TCP {
 		/// <exception cref="InvalidOperationException">When the ID is not connected</exception>
 		public void DisconnectClient(byte clientID) {
 			try {
-				ServerToClientConnection a = connectedClients.Values.Where(s => s.infoAboutOtherSide.ClientID == clientID).Single();
+				ServerToClientConnection a = connectedClients.Values.Single(s => s.infoAboutOtherSide.ID == clientID);
 				a.DisconnectClient(clientID);
 			}
 			catch {
@@ -203,9 +203,7 @@ namespace Igor.TCP {
 		/// Set listening for incoming client connection attempts
 		/// </summary>
 		public bool IsListeningForClients {
-			get {
-				return listenForClientConnections;
-			}
+			get => listenForClientConnections;
 			set {
 				if (!listenForClientConnections && value) {
 					_ = StartServer(currentAddress, currentPort);
@@ -281,21 +279,22 @@ namespace Igor.TCP {
 
 
 				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
-					ClientID = 0
+					ID = 0
 				};
 				ServerToClientConnection conn = new ServerToClientConnection(newlyConnected, serverInfo, connectedClientInfo, this);
 				conn.dataIDs.rerouter = this;
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
-				bool accepted = OcClientConnectionAttempt(connectedClientInfo);
+				bool accepted = OnClientConnectionAttempt(connectedClientInfo);
 				if (accepted) {
 					try {
 						await newStream.WriteAsync(new byte[] { ID }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 						connectedClients.Add(ID, conn);
 						OnClientConnected?.Invoke(this, new ClientConnectedEventArgs(this, connectedClientInfo));
 					}
-					catch {
-						continue;
+					catch { 
+						/* If writing to the stream failed then the state does not change,
+						   If the OnClientConnected function throws, the state is persisted */
 					}
 				}
 				else {
@@ -347,7 +346,7 @@ namespace Igor.TCP {
 				byte[] merged = new byte[rawData.Length + 1];
 				merged[0] = ID;
 				rawData.CopyTo(merged, 1);
-				connectedClients[clientID].SendData(DataIDs.PropertySyncID, SERVER_PACKET_ORIGIN_ID, merged);
+				connectedClients[clientID].SendData(DataIDs.PROPERTY_SYNC_ID, SERVER_PACKET_ORIGIN_ID, merged);
 				return;
 			}
 			throw new NullReferenceException("Client with ID " + clientID + " is not connected to the server!");
@@ -362,7 +361,7 @@ namespace Igor.TCP {
 		/// </summary>
 		public void ProvideValue<T>(byte packetID, Func<T> function) {
 			foreach (TCPClientInfo info in ConnectedClients) {
-				if (connectedClients[info.ClientID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
+				if (connectedClients[info.ID].dataIDs.IsIDReserved(packetID, out Type dataType, out string message)) {
 					throw new PacketIDTakenException(packetID, dataType, message);
 				}
 			}
@@ -417,7 +416,7 @@ namespace Igor.TCP {
 		/// <exception cref="System.Runtime.Serialization.SerializationException"></exception>
 		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
-				info.SendData(packetID, info.infoAboutOtherSide.ClientID, SimpleTCPHelper.GetBytesFromObject(data));
+				info.SendData(packetID, info.infoAboutOtherSide.ID, SimpleTCPHelper.GetBytesFromObject(data));
 			}
 		}
 

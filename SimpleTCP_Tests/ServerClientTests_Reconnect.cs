@@ -23,12 +23,12 @@ namespace Igor.TCP {
 			await client.ConnectAsync(1000);
 
 			await Task.Delay(100);;
-			Assert.IsTrue(client.ClientInfo.ClientID == 1);
+			Assert.IsTrue(client.Info.ID == 1);
 			Assert.IsTrue(client.Connection != null);
 			Assert.IsTrue(client.Connection.ListeningForData);
 			Assert.IsTrue(client.Connection.SendingData);
 			Assert.IsTrue(server.ConnectedClients.Length == 1);
-			Assert.IsTrue(server.ConnectedClients[0].ClientID == 1);
+			Assert.IsTrue(server.ConnectedClients[0].ID == 1);
 			Assert.IsTrue(server.GetConnection(1).SendingData);
 			Assert.IsTrue(server.GetConnection(1).ListeningForData);
 

@@ -14,8 +14,8 @@ namespace Igor.TCP {
 		public void ClientStart() {
 			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55555);
 
-			Assert.ThrowsException<InvalidOperationException>(() => client.ClientInfo.ClientID == 255);
-			Assert.IsTrue(client.ClientInfo.Name == Environment.UserName);
+			Assert.ThrowsException<InvalidOperationException>(() => client.Info.ID == 255);
+			Assert.IsTrue(client.Info.Name == Environment.UserName);
 			Assert.IsNull(client.Connection);
 		}
 
@@ -40,11 +40,11 @@ namespace Igor.TCP {
 				server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
 				server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
 
-				server.GetConnection(e.ClientInfo.ClientID).SendData(55, new TestStruct { a = 50 });
-				server.GetConnection(e.ClientInfo.ClientID).SendData(56, new MyClass());
-				server.GetConnection(e.ClientInfo.ClientID).SendData(57, new C2());
-				server.GetConnection(e.ClientInfo.ClientID).SendData(58, new Text<int>());
-				server.GetConnection(e.ClientInfo.ClientID).SendData(59, new List<MyClass>());
+				server.GetConnection(e.ClientInfo.ID).SendData(55, new TestStruct { a = 50 });
+				server.GetConnection(e.ClientInfo.ID).SendData(56, new MyClass());
+				server.GetConnection(e.ClientInfo.ID).SendData(57, new C2());
+				server.GetConnection(e.ClientInfo.ID).SendData(58, new Text<int>());
+				server.GetConnection(e.ClientInfo.ID).SendData(59, new List<MyClass>());
 			};
 
 			bool res = await client.ConnectAsync(1000);

@@ -13,7 +13,7 @@ namespace Igor.TCP {
 			TCPServer server = new TCPServer(new ServerConfiguration());
 
 			server.OnClientConnected += (s,e) => {
-				server.DefineCustomPacket<(int, string)>(e.ClientInfo.ClientID, 80, OnPacketReceived);
+				server.DefineCustomPacket<(int, string)>(e.ClientInfo.ID, 80, OnPacketReceived);
 			};
 
 			await server.Start(IPAddress.Loopback,8998); 

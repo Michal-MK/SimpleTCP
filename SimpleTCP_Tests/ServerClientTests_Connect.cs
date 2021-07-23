@@ -31,11 +31,11 @@ namespace Igor.TCP {
 
 			Assert.IsTrue(server.ConnectedClients[0].Address.ToString() == SimpleTCPHelper.GetActiveIPv4Address().ToString());
 			Assert.IsTrue(server.ConnectedClients[0].Name == Environment.UserName);
-			Assert.IsTrue(server.ConnectedClients[0].ClientID == 1);
+			Assert.IsTrue(server.ConnectedClients[0].ID == 1);
 
 			Assert.IsTrue(client.Connection.ListeningForData);
 			Assert.IsTrue(client.Connection.SendingData);
-			Assert.IsTrue(client.ClientInfo.ClientID == 1);
+			Assert.IsTrue(client.Info.ID == 1);
 
 			server.Stop();
 		}

@@ -31,11 +31,11 @@ namespace Igor.TCP {
 
 			Assert.IsTrue(client.Connection.ListeningForData);
 			Assert.IsTrue(client.Connection.SendingData);
-			Assert.IsTrue(client.ClientInfo.ClientID == 1);
+			Assert.IsTrue(client.Info.ID == 1);
 
 			await Task.Delay(100);
 
-			server.DisconnectClient(client.ClientInfo.ClientID);
+			server.DisconnectClient(client.Info.ID);
 
 			await Task.Delay(100);
 

@@ -9,7 +9,7 @@ namespace Igor.TCP {
 
 	/// <summary>
 	/// Slight modification to original work from here:
-	/// <see cref="https://stackoverflow.com/questions/13911473/multithreading-c-sharp-gui-ping-example"/>
+	/// https://stackoverflow.com/questions/13911473/multithreading-c-sharp-gui-ping-example
 	/// <para>Example Usages:</para>
 	/// <code>
 	/// PingAll("1.2.3.4");
@@ -27,14 +27,14 @@ namespace Igor.TCP {
 	/// </summary>
 	public static class Pinger {
 		private const byte ICMP_ECHO = 8;
-		private const byte ICMP_ECHOREPLY = 0;
+		private const byte ICMP_ECHO_REPLY = 0;
 		private const int OFFSET_ID = 4;
 		private const int OFFSET_CHECKSUM = 2;
 		private const int IP_HEADER_LEN = 20;
 		private const int ICMP_HEADER_LEN = 8;
 
 		public static IEnumerable<PingerHost> PingAll(string subNets, int timeOut = 1500) {
-			ushort PACKET_ID = (ushort)new Random().Next(0, ushort.MaxValue);
+			ushort packetID = (ushort)new Random().Next(0, ushort.MaxValue);
 
 			//Init
 			using (Socket rawSock = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.Icmp)) {
@@ -49,20 +49,20 @@ namespace Igor.TCP {
 
 				//** Receiver **
 				Task receiver = Task.Factory.StartNew(() => {
-					byte[] bytesRecv = new byte[64];
-					EndPoint remoteAddr = new IPEndPoint(IPAddress.Any, 0);
+					byte[] received = new byte[64];
+					EndPoint remoteAddress = new IPEndPoint(IPAddress.Any, 0);
 
 					while (true) {
 						try {
-							rawSock.ReceiveFrom(bytesRecv, ref remoteAddr);
+							rawSock.ReceiveFrom(received, ref remoteAddress);
 						}
-						catch { return; };
+						catch { return; }
 
-						ushort replyId = BitConverter.ToUInt16(bytesRecv, IP_HEADER_LEN + OFFSET_ID);
-						if (bytesRecv[IP_HEADER_LEN] == ICMP_ECHOREPLY && replyId == PACKET_ID) {
-							long ticksInPong = BitConverter.ToInt64(bytesRecv, IP_HEADER_LEN + ICMP_HEADER_LEN);
+						ushort replyId = BitConverter.ToUInt16(received, IP_HEADER_LEN + OFFSET_ID);
+						if (received[IP_HEADER_LEN] == ICMP_ECHO_REPLY && replyId == packetID) {
+							long ticksInPong = BitConverter.ToInt64(received, IP_HEADER_LEN + ICMP_HEADER_LEN);
 							int duration = (int)((DateTime.Now.Ticks - ticksInPong) / TimeSpan.TicksPerMillisecond);
-							var host = new PingerHost(((IPEndPoint)remoteAddr).Address.ToString(), duration);
+							PingerHost host = new PingerHost(((IPEndPoint)remoteAddress).Address.ToString(), duration);
 
 							lock (aliveIPs) {
 								aliveIPs.Add(host);
@@ -75,7 +75,7 @@ namespace Igor.TCP {
 
 				//** Sender **
 				foreach (var ip in GetIPAddresses(subNets)) {
-					byte[] packet = CreatePacket(PACKET_ID, BitConverter.GetBytes(DateTime.Now.Ticks));
+					byte[] packet = CreatePacket(packetID, BitConverter.GetBytes(DateTime.Now.Ticks));
 					IPEndPoint dest = new IPEndPoint(IPAddress.Parse(ip), 0);
 					try {
 						rawSock.SendTo(packet, dest);
@@ -91,11 +91,11 @@ namespace Igor.TCP {
 			}
 		}
 
-		public static Task<IEnumerable<PingerHost>> PingAllAsync(string subNets, int TimeOut = 1500) {
-			return Task.Run(() => PingAll(subNets, TimeOut));
+		public static Task<IEnumerable<PingerHost>> PingAllAsync(string subNets, int timeout = 1500) {
+			return Task.Run(() => PingAll(subNets, timeout));
 		}
 
-		static byte[] CreatePacket(ushort id, byte[] data) {
+		private static byte[] CreatePacket(ushort id, byte[] data) {
 			byte[] packet = new byte[ICMP_HEADER_LEN + data.Length];
 			packet[0] = ICMP_ECHO;
 
@@ -130,12 +130,12 @@ namespace Igor.TCP {
 				   from p2 in GetRange(parts[1])
 				   from p3 in GetRange(parts[2])
 				   from p4 in GetRange(parts[3])
-				   select string.Format("{0}.{1}.{2}.{3}", p1, p2, p3, p4);
+				   select $"{p1}.{p2}.{p3}.{p4}";
 		}
 
 		private static IEnumerable<int> GetRange(string s) {
-			foreach (var part in s.Split(new char[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) {
-				var range = part.Split(new char[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
+			foreach (string part in s.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)) {
+				string[] range = part.Split(new[] { '-' }, StringSplitOptions.RemoveEmptyEntries);
 				if (range.Length > 2) throw new FormatException($"Invalid Format");
 				if (range.Length == 1) yield return int.Parse(range[0]);
 				else {

@@ -17,8 +17,8 @@ namespace Igor.TCP {
 			evnt.Reset();
 			return await Task.Run(delegate () {
 				byte request = ID;
-				connection.SendData(DataIDs.RequestReceptionID, request);
-				connection._OnResponse += Connection_OnResponse;
+				connection.SendData(DataIDs.REQUEST_RECEPTION_ID, request);
+				connection.OnResponse += Connection_OnResponse;
 				evnt.Wait();
 				currentResponseObject.DataType = type;
 				return currentResponseObject;

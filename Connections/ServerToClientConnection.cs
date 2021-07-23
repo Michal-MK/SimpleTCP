@@ -24,7 +24,7 @@ namespace Igor.TCP {
 				DisconnectClient(data.SenderID);
 				server.connectedClients.Remove(data.SenderID);
 			}
-			if (data.DataID == DataIDs.ClientDisconnected) {
+			if (data.DataID == DataIDs.CLIENT_DISCONNECTED) {
 				SendingData = false;
 				evnt.Set();
 				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
@@ -43,7 +43,7 @@ namespace Igor.TCP {
 		/// </summary>
 		public void DisconnectClient(byte clientID) {
 			if (ListeningForData) {
-				SendDataImmediate(DataIDs.ClientDisconnected, new byte[] { clientID });
+				SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, new byte[] { clientID });
 				SendingData = false;
 				evnt.Set();
 				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));

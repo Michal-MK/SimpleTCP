@@ -10,12 +10,11 @@ namespace Igor.TCP {
 	/// Static class containing useful methods for data transmission
 	/// </summary>
 	public static class SimpleTCPHelper {
-
-		private static BinaryFormatter bf;
+		private static readonly IFormatter formatter;
 
 		static SimpleTCPHelper() {
-			bf = new BinaryFormatter();
-			bf.Binder = new MyBinder();
+			formatter = new BinaryFormatter();
+			formatter.Binder = new MyBinder();
 		}
 
 		/// <summary>
@@ -25,18 +24,7 @@ namespace Igor.TCP {
 		public static IPAddress GetActiveIPv4Address(int timeout = 2000) {
 			using (Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0)) {
 				socket.Connect("8.8.8.8", 80);
-				return (socket.LocalEndPoint as IPEndPoint).Address;
-
-				IAsyncResult result = socket.BeginConnect("8.8.8.8", 80, null, null);
-
-				bool success = result.AsyncWaitHandle.WaitOne(timeout, true);
-				if (success) {
-					socket.EndConnect(result);
-					return (socket.LocalEndPoint as IPEndPoint).Address;
-				}
-				else {
-					throw new WebException("Unable to connect to Google proxy, you are offline (or Google is, but we know that is not true)", WebExceptionStatus.ConnectFailure);
-				}
+				return ((IPEndPoint)socket.LocalEndPoint).Address;
 			}
 		}
 
@@ -44,52 +32,27 @@ namespace Igor.TCP {
 		/// Wrapper to all object to byte[] conversions
 		/// </summary>
 		internal static byte[] GetBytesFromObject(object obj) {
-			byte[] bytes;
-
-			if (obj is bool bo) {
-				bytes = BitConverter.GetBytes(bo);
-			}
-			else if (obj is byte by) {
-				bytes = new[] { by };
-			}
-			else if (obj is string str) {
-				bytes = System.Text.Encoding.UTF8.GetBytes(str);
-			}
-			else if (obj is char c) {
-				bytes = BitConverter.GetBytes(c);
-			}
-			else if (obj is double d) {
-				bytes = BitConverter.GetBytes(d);
-			}
-			else if (obj is float f) {
-				bytes = BitConverter.GetBytes(f);
-			}
-			else if (obj is int i) {
-				bytes = BitConverter.GetBytes(i);
-			}
-			else if (obj is long l) {
-				bytes = BitConverter.GetBytes(l);
-			}
-			else if (obj is short sh) {
-				bytes = BitConverter.GetBytes(sh);
-			}
-			else if (obj is uint ui) {
-				bytes = BitConverter.GetBytes(ui);
-			}
-			else if (obj is ulong ul) {
-				bytes = BitConverter.GetBytes(ul);
-			}
-			else if (obj is ushort us) {
-				bytes = BitConverter.GetBytes(us);
-			}
-			else {
-				using (MemoryStream ms = new MemoryStream()) {
-					bf.Serialize(ms, obj);
-					ms.Seek(0, SeekOrigin.Begin);
-					bytes = ms.ToArray();
+			switch (obj) {
+				case bool bo:    return BitConverter.GetBytes(bo);
+				case byte b:     return new[] { b };
+				case string str: return System.Text.Encoding.UTF8.GetBytes(str);
+				case char c:     return BitConverter.GetBytes(c);
+				case double d:   return BitConverter.GetBytes(d);
+				case float f:    return BitConverter.GetBytes(f);
+				case int i:      return BitConverter.GetBytes(i);
+				case long l:     return BitConverter.GetBytes(l);
+				case short sh:   return BitConverter.GetBytes(sh);
+				case uint ui:    return BitConverter.GetBytes(ui);
+				case ulong ul:   return BitConverter.GetBytes(ul);
+				case ushort us:  return BitConverter.GetBytes(us);
+				default: {
+					using (MemoryStream ms = new MemoryStream()) {
+						formatter.Serialize(ms, obj);
+						ms.Seek(0, SeekOrigin.Begin);
+						return ms.ToArray();
+					}
 				}
 			}
-			return bytes;
 		}
 
 		internal static object GetObject(Type t, byte[] bytes) {
@@ -134,7 +97,7 @@ namespace Igor.TCP {
 			else {
 				try {
 					using (MemoryStream ms = new MemoryStream(bytes)) {
-						obj = bf.Deserialize(ms);
+						obj = formatter.Deserialize(ms);
 					}
 				}
 				catch (Exception e) {
@@ -151,57 +114,55 @@ namespace Igor.TCP {
 			if (tType == typeof(bool)) {
 				return (T)Convert.ChangeType(BitConverter.ToBoolean(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(char)) {
+			if (tType == typeof(char)) {
 				return (T)Convert.ChangeType(BitConverter.ToChar(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(double)) {
+			if (tType == typeof(double)) {
 				return (T)Convert.ChangeType(BitConverter.ToDouble(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(float)) {
+			if (tType == typeof(float)) {
 				return (T)Convert.ChangeType(BitConverter.ToSingle(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(Int32)) {
+			if (tType == typeof(Int32)) {
 				return (T)Convert.ChangeType(BitConverter.ToInt32(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(Int64)) {
+			if (tType == typeof(Int64)) {
 				return (T)Convert.ChangeType(BitConverter.ToInt64(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(Int16)) {
+			if (tType == typeof(Int16)) {
 				return (T)Convert.ChangeType(BitConverter.ToInt16(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(UInt32)) {
+			if (tType == typeof(UInt32)) {
 				return (T)Convert.ChangeType(BitConverter.ToUInt32(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(UInt64)) {
+			if (tType == typeof(UInt64)) {
 				return (T)Convert.ChangeType(BitConverter.ToUInt64(bytes, 0), typeof(T));
 			}
-			else if (tType == typeof(UInt16)) {
+			if (tType == typeof(UInt16)) {
 				return (T)Convert.ChangeType(BitConverter.ToUInt16(bytes, 0), typeof(T));
 			}
-			else {
-				try {
-					using (MemoryStream ms = new MemoryStream()) {
-						ms.Write(bytes, 0, bytes.Length);
-						ms.Seek(0, SeekOrigin.Begin);
-						return (T)bf.Deserialize(ms);
-					}
+			try {
+				using (MemoryStream ms = new MemoryStream()) {
+					ms.Write(bytes, 0, bytes.Length);
+					ms.Seek(0, SeekOrigin.Begin);
+					return (T)formatter.Deserialize(ms);
 				}
-				catch (Exception) {
-					throw new SerializationException("Unable to deserialize stream into type '" + tType.ToString() +
-						"' possibly the stream was not serialized using the internal serializer," +
-						" in that case you have to write your own deserializer as well.");
-				}
+			}
+			catch (Exception) {
+				throw new SerializationException($"Unable to deserialize stream into type '{tType}'" +
+												 " possibly the stream was not serialized using the internal serializer," +
+												 " in that case you have to write your own deserializer as well.");
 			}
 		}
 
 		/// <summary>
 		/// Convert numeric value of bytes to an integer, lower index >> less important byte
 		/// </summary>
-		public static UInt64 ConvertToUInt64(byte[] byteRepresentaion) {
-			int len = byteRepresentaion.Length;
+		public static UInt64 ConvertToUInt64(byte[] byteRepresentation) {
+			int len = byteRepresentation.Length;
 			UInt64 ret = 0;
 			for (uint i = 0; i < len; i++) {
-				ret += byteRepresentaion[i] * IntPow(byte.MaxValue, i);
+				ret += byteRepresentation[i] * IntPow(byte.MaxValue, i);
 			}
 			return ret;
 		}
@@ -217,7 +178,6 @@ namespace Igor.TCP {
 			}
 			return ret;
 		}
-
 
 		internal static void SaveArrayToFile(string file, byte[] array) {
 			using (StreamWriter sw = File.CreateText(file)) {

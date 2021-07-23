@@ -40,11 +40,11 @@ namespace Igor.TCP {
 		}
 
 		private void Server_OnClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
-			if(e.ClientInfo.ClientID == 1) {
-				client1Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ClientID == 1 && e.ClientInfo.Name == "Client 1";
+			if(e.ClientInfo.ID == 1) {
+				client1Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 1 && e.ClientInfo.Name == "Client 1";
 			}
 			else {
-				client2Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ClientID == 2 && e.ClientInfo.Name == "Client 2";
+				client2Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 2 && e.ClientInfo.Name == "Client 2";
 			}
 		}
 	}

@@ -18,7 +18,7 @@ namespace Igor.TCP {
 			if (!res) { Assert.Fail(); }
 
 			await Task.Delay(500);
-			byte clientID = client.ClientInfo.ClientID;
+			byte clientID = client.Info.ID;
 			client.Dispose();
 
 			await Task.Delay(500);

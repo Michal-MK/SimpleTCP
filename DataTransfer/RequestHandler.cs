@@ -6,7 +6,7 @@ namespace Igor.TCP {
 	/// </summary>
 	public class RequestHandler {
 
-		internal TCPConnection connection;
+		internal readonly TCPConnection connection;
 
 		internal RequestHandler(TCPConnection connection) {
 			this.connection = connection;
@@ -17,12 +17,12 @@ namespace Igor.TCP {
 			HandleRequest(request, rawData);
 		}
 
-		internal void HandleRequest(TCPRequest request, byte[] data_ready) {
-			byte[] data = new byte[data_ready.Length + DataIDs.PACKET_ID_COMPLEXITY];
+		internal void HandleRequest(TCPRequest request, byte[] dataReady) {
+			byte[] data = new byte[dataReady.Length + DataIDs.PACKET_ID_COMPLEXITY];
 			data[0] = request.PacketID;
-			data_ready.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
+			dataReady.CopyTo(data, DataIDs.PACKET_ID_COMPLEXITY);
 
-			connection.SendData(DataIDs.ResponseReceptionID, connection.myInfo.ClientID, data);
+			connection.SendData(DataIDs.RESPONSE_RECEPTION_ID, connection.myInfo.ID, data);
 		}
 
 		/// <summary>
