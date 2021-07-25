@@ -3,17 +3,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-
 	[TestClass]
-	public class ServerTests {
-
+	public class ServerTests : TestBase {
 		#region Server construction default configuration
 
-		private bool eventFired = false;
+		private bool eventFired;
 
 		[TestMethod]
 		public async Task ServerStart() {
-			TCPServer server = new TCPServer(new ServerConfiguration(true));
+			TCPServer server = new(new ServerConfiguration(true));
 			server.OnServerStarted += Server_OnServerStarted;
 			Assert.IsTrue(server.ServerConfiguration.ClientCanRequestFromServer);
 
@@ -36,15 +34,5 @@ namespace Igor.TCP {
 		}
 
 		#endregion
-	}
-}
-
-namespace Testing {
-	using Igor.TCP;
-	public class TestT {
-		public void T() {
-			ConnectionData c = new ConnectionData("", 5);
-			//DataIDs //Inaccessible
-		}
 	}
 }

@@ -5,9 +5,10 @@ namespace Igor.TCP {
 	/// Event data for undefined packet ids event
 	/// </summary>
 	public class UndefinedPacketEventArgs : EventArgs {
-		internal UndefinedPacketEventArgs(byte packetID, byte[] data) {
+		internal UndefinedPacketEventArgs(byte senderID, byte packetID, byte[] data) {
 			UnknownData = data;
 			PacketID = packetID;
+			SenderID = senderID;
 		}
 
 		/// <summary>
@@ -19,5 +20,10 @@ namespace Igor.TCP {
 		/// ID of the packet
 		/// </summary>
 		public byte PacketID { get; }
+		
+		/// <summary>
+		/// ID of the sender
+		/// </summary>
+		public byte SenderID { get; }
 	}
 }

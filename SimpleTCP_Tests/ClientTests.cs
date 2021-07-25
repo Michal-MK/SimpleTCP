@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace Igor.TCP {
-
 	[TestClass]
-	public class ClientTests {
-
+	public class ClientTests : TestBase {
 		#region Client construction defaults
 
 		[TestMethod]
 		public void ClientStart() {
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55555);
+			TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 55555);
 
 			Assert.ThrowsException<InvalidOperationException>(() => client.Info.ID == 255);
 			Assert.IsTrue(client.Info.Name == Environment.UserName);
@@ -22,24 +21,19 @@ namespace Igor.TCP {
 		#endregion
 
 		#region Definition of requests and packets
-		private int matches;
 
+		private int matches;
 
 		[TestMethod]
 		public async Task Define() {
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 4245);
-
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 4245);
+			using TCPServer server = new(new ServerConfiguration());
+			using ManualResetEventSlim localEvnt = new();
 
 			await server.Start(4245);
 
-			server.OnClientConnected += (s, e) => {
-				server.DefineCustomPacket<TestStruct>(1, 55, OnSt_C);
-				server.DefineCustomPacket<MyClass>(1, 56, OnNd_C);
-				server.DefineCustomPacket<C2>(1, 57, OnRd_C);
-				server.DefineCustomPacket<Text<int>>(1, 58, OnSTh_C);
-				server.DefineCustomPacket<List<MyClass>>(1, 59, OnSTh_C);
-
+			server.OnClientConnected += (_, e) => {
+				localEvnt.Wait();
 				server.GetConnection(e.ClientInfo.ID).SendData(55, new TestStruct { a = 50 });
 				server.GetConnection(e.ClientInfo.ID).SendData(56, new MyClass());
 				server.GetConnection(e.ClientInfo.ID).SendData(57, new C2());
@@ -47,60 +41,50 @@ namespace Igor.TCP {
 				server.GetConnection(e.ClientInfo.ID).SendData(59, new List<MyClass>());
 			};
 
+
 			bool res = await client.ConnectAsync(1000);
+
 			if (!res) {
 				Assert.Fail();
 			}
-			client.DefineCustomPacket<TestStruct>(55, OnSt_C);
-			client.DefineCustomPacket<MyClass>(56, OnNd_C);
-			client.DefineCustomPacket<C2>(57, OnRd_C);
-			client.DefineCustomPacket<Text<int>>(58, OnSTh_C);
-			client.DefineCustomPacket<List<MyClass>>(59, OnSTh_C);
+			
+			client.DefineCustomPacket<TestStruct>(55, (_, _) => Match());
+			client.DefineCustomPacket<MyClass>(56, (_, _) => Match());
+			client.DefineCustomPacket<C2>(57, (_, _) => Match());
+			client.DefineCustomPacket<Text<int>>(58, (_, _) => Match());
+			client.DefineCustomPacket<List<MyClass>>(59, (_, _) => Match());
+			
+			localEvnt.Set();
+			
+			await Task.Run(Wait);
 
-			await Task.Delay(400);
-
-			Assert.IsTrue(matches == 5);
-		}
-
-		private void OnSt_C(byte sender, TestStruct arg1) {
-			matches++;
-		}
-
-		private void OnSTh_C(byte sender, List<MyClass> arg1) {
-			matches++;
-		}
-
-		private void OnSTh_C(byte sender, Text<int> arg1) {
-			matches++;
-		}
-
-		private void OnRd_C(byte sender, C2 arg1) {
-			matches++;
-		}
-
-		private void OnNd_C(byte sender, MyClass arg1) {
-			matches++;
+			Assert.IsTrue(evnt.IsSet);
+			
+			void Match() {
+				matches++;
+				if (matches == 5) evnt.Set();
+			}
 		}
 
 		[Serializable]
 		public struct TestStruct {
 			public int a;
 		}
+
 		[Serializable]
 		public class MyClass {
 			public int a;
 		}
-		[Serializable]
-		public abstract class C1 {
 
-		}
 		[Serializable]
-		public class C2 : C1 {
+		public abstract class C1 { }
 
-		}
+		[Serializable]
+		public class C2 : C1 { }
+
 		[Serializable]
 		public class Text<TText> {
-
+			public TText field;
 		}
 
 		#endregion

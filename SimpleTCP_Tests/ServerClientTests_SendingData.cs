@@ -1,33 +1,30 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 
-
 namespace Igor.TCP {
-	public partial class ServerClientTests {
-
+	[TestClass]
+	public class ServerClientTests_SendingData : TestBase {
 		private byte sentByte = 128;
 
 		[TestMethod]
 		public async Task SendSimpleData() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
 			const byte PACKET_ID = 4;
 
 			await client.ConnectAsync(1000);
-			client.DefineCustomPacket(PACKET_ID, (byte sender, byte value) => {
-				Assert.IsTrue(value == sentByte);
-			});
+			client.DefineCustomPacket(PACKET_ID, (byte _, byte value) => { Assert.IsTrue(value == sentByte); evnt.Set(); });
 
-			server.DefineCustomPacket(1, PACKET_ID, (byte sender, byte value) => { Assert.IsTrue(value == sentByte); });
+			server.DefineCustomPacket(1, PACKET_ID, (byte _, byte value) => { Assert.IsTrue(value == sentByte); });
 
 			client.Connection.SendData(PACKET_ID, sentByte);
 
 			server.GetConnection(1).SendData(PACKET_ID, sentByte);
 
-			await Task.Delay(100);
+			await Task.Run(Wait);
 
 			server.Stop();
 		}

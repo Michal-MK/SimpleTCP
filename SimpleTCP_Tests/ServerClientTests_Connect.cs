@@ -5,15 +5,15 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace Igor.TCP {
 
 	[TestClass]
-	public partial class ServerClientTests {
+	public class ServerClientTests_Connect : TestBase {
 
 		private bool clientConnectedEventFired = false;
 
 		[TestMethod]
 		public async Task Connect() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new (new ServerConfiguration());
 			server.OnClientConnected += Server_OnConnectionEstablished;
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
 			bool res = await client.ConnectAsync(1000);
@@ -23,13 +23,15 @@ namespace Igor.TCP {
 				return;
 			}
 
+			await Task.Run(Wait);
+
 			Assert.IsTrue(clientConnectedEventFired);
 			Assert.IsTrue(server.ConnectedClients.Length == 1);
 			Assert.IsNotNull(client.Connection);
 
 			Assert.IsTrue(server.ConnectedClients[0].IsServer == false);
 
-			Assert.IsTrue(server.ConnectedClients[0].Address.ToString() == SimpleTCPHelper.GetActiveIPv4Address().ToString());
+			Assert.IsTrue(server.ConnectedClients[0].Address == SimpleTCPHelper.GetActiveIPv4Address().ToString());
 			Assert.IsTrue(server.ConnectedClients[0].Name == Environment.UserName);
 			Assert.IsTrue(server.ConnectedClients[0].ID == 1);
 
@@ -42,6 +44,7 @@ namespace Igor.TCP {
 
 		private void Server_OnConnectionEstablished(object sender, ClientConnectedEventArgs e) {
 			clientConnectedEventFired = true;
+			evnt.Set();
 		}
 	}
 }

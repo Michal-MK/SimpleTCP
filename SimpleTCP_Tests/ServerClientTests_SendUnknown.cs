@@ -3,24 +3,24 @@ using System;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	partial class ServerClientTests {
-
-		public bool SendUnknownEventSuccess;
+	[TestClass]
+	public class ServerClientTests_SendUnknown : TestBase {
+		private bool sendUnknownEventSuccess;
 
 		[TestMethod]
 		public async Task SendUnknownData() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new (new ServerConfiguration());
 			server.OnClientConnected += Server_OnClientConnected;
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
 			await client.ConnectAsync(1000);
 
 			client.Connection.SendData(64, (byte)50);
 
-			await Task.Delay(200);
+			await Task.Run(Wait);
 
-			Assert.IsTrue(SendUnknownEventSuccess);
+			Assert.IsTrue(sendUnknownEventSuccess);
 		}
 
 		private void Server_OnClientConnected(object sender, ClientConnectedEventArgs e) {
@@ -28,7 +28,8 @@ namespace Igor.TCP {
 		}
 
 		private void ServerClientTests_OnUndefinedPacketReceived(object sender, UndefinedPacketEventArgs e) {
-			SendUnknownEventSuccess = e.PacketID == 64 && e.UnknownData[0] == 50;
+			sendUnknownEventSuccess = e.PacketID == 64 && e.UnknownData[0] == 50;
+			evnt.Set();
 		}
 	}
 }

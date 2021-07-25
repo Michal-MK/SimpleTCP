@@ -3,26 +3,26 @@ using System;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	public partial class ServerClientTests {
+	[TestClass]
+	public class ServerClientTests_Reconnect : TestBase {
 
 		[TestMethod]
 		public async Task ReconnectToServer() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new (new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
 			await client.ConnectAsync(1000);
-
-			await Task.Delay(100);;
+			
 			client.Disconnect();
 
 			await Task.Delay(100);;
+			
 			Assert.IsTrue(client.Connection == null);
 
 			await client.ConnectAsync(1000);
-
-			await Task.Delay(100);;
+			
 			Assert.IsTrue(client.Info.ID == 1);
 			Assert.IsTrue(client.Connection != null);
 			Assert.IsTrue(client.Connection.ListeningForData);

@@ -1,9 +1,7 @@
-﻿using Igor.SameTest;
-using Igor.Test;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Threading.Tasks;
-
+using TestDataStruct = Igor.Test.TestDataStruct;
 
 namespace Igor.Test {
 	[Serializable]
@@ -30,18 +28,19 @@ namespace Igor.TestData {
 }
 
 namespace Igor.TCP {
-	public partial class ServerClientTests {
+	[TestClass]
+	public class ServerClientTests_CustomStructurePacket : TestBase {
 		[TestMethod]
 		public async Task CustomStructurePacket() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
 			const byte PACKET_ID = 4;
 
 			await client.ConnectAsync(1000);
-			
+
 			client.ProvideValue(PACKET_ID, AlsoGet);
 
 			server.ProvideValue(1, PACKET_ID, Get);
@@ -52,32 +51,34 @@ namespace Igor.TCP {
 			Assert.IsTrue(resp.dataTest[0].ID == 0);
 			Assert.IsTrue(resp.dataTest[0].moreData[0] == "Hello");
 
-			Test.TestDataStruct resp2 = await client.GetValue<Test.TestDataStruct>(PACKET_ID);
+			TestDataStruct resp2 = await client.GetValue<TestDataStruct>(PACKET_ID);
 
-			Assert.IsTrue(resp2.GetType() == typeof(Test.TestDataStruct));
 			Assert.IsTrue(resp2.data[0] == "Ahoooooooooooj");
 			Assert.IsTrue(resp2.dataTest[0].ID == 0);
 			Assert.IsTrue(resp2.dataTest[0].moreData[0] == "Hell00000000000");
-
 			
 			server.Stop();
 		}
 
 		private SameTest.TestDataStruct AlsoGet() {
-			return new SameTest.TestDataStruct() {
+			return new() {
 				data = new[] { "Ahoj" },
-				dataTest = new TestData.TestDataTwo[] {
-					new TestData.TestDataTwo() {
-						ID = 0, moreData = new[] { "Hello" } } }
+				dataTest = new[] {
+					new TestData.TestDataTwo {
+						ID = 0, moreData = new[] { "Hello" }
+					}
+				}
 			};
 		}
 
-		private Test.TestDataStruct Get() {
-			return new Test.TestDataStruct() {
+		private TestDataStruct Get() {
+			return new() {
 				data = new[] { "Ahoooooooooooj" },
-				dataTest = new TestData.TestDataTwo[] {
-					new TestData.TestDataTwo() {
-						ID = 0, moreData = new[] { "Hell00000000000" } } }
+				dataTest = new[] {
+					new TestData.TestDataTwo {
+						ID = 0, moreData = new[] { "Hell00000000000" }
+					}
+				}
 			};
 		}
 	}

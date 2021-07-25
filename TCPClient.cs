@@ -151,7 +151,7 @@ namespace Igor.TCP {
 		}
 
 		/// <summary>
-		/// Define 'propertyPacketID' for synchronization of public property named 'propetyName' from instance of a class 'instance' 
+		/// Define 'propertyPacketID' for synchronization of public property named 'propertyName' from instance of a class 'instance' 
 		/// </summary>
 		public void SyncProperty(object instance, string propertyName, byte propertyPacketID) {
 			Connection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));

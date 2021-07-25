@@ -1,72 +1,99 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	public partial class ServerClientTests {
+	[TestClass]
+	public class ServerClientTests_PropSync : TestBase {
 		#region Property synchronization
 
-		public string[] serverProperty { get; set; } = new string[] { "Hello", "Server" };
-		string[] clientProperty { get; set; } = null;
-		public string[] clientPropertyPublic { get; set; } = null;
+		public string[] ServerProperty { get; set; } = { "Hello", "Server" };
+		public string[] ClientProperty { get; set; } = null;
+		
+		private string[] clientPropertyPublic;
+
+		public string[] ClientPropertyPublic {
+			get => clientPropertyPublic;
+			set {
+				clientPropertyPublic = value;
+				evnt.Set();
+			}
+		}
 
 		[TestMethod]
 		public async Task SynchronizeProp() {
 
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55552);
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 55552);
 
-			await server.Start(55552);
-			await client.ConnectAsync(1000);
+			using ManualResetEventSlim localEvnt = new();
 
 			const byte PROP_ID = 4;
+			
+			await server.Start(55552);
 
-			server.SyncProperty(1, this, nameof(serverProperty), PROP_ID);
+			server.OnClientConnected += (_, e) => {
+				server.SyncProperty(1, this, nameof(ServerProperty), PROP_ID);
+				localEvnt.Set();
+			};
 
-			Assert.ThrowsException<InvalidOperationException>(() => { client.SyncProperty(this, nameof(clientProperty), PROP_ID); });
+			await client.ConnectAsync(1000);
+
+			await Task.Run(localEvnt.Wait);
+
 			Assert.ThrowsException<NotImplementedException>(() => { client.SyncProperty(this, "Nonexistent Property Name", PROP_ID); });
 
-			client.SyncProperty(this, nameof(clientPropertyPublic), PROP_ID);
+			client.SyncProperty(this, nameof(ClientPropertyPublic), PROP_ID);
+			Assert.ThrowsException<ArgumentException>(() => { client.SyncProperty(this, nameof(ClientProperty), PROP_ID); });
 
-			server.UpdateProp(1, PROP_ID, serverProperty);
+			server.UpdateProp(1, PROP_ID, ServerProperty);
 
-			await Task.Delay(100);;
-			Assert.IsNotNull(clientPropertyPublic);
-			Assert.IsTrue(clientPropertyPublic[0] == "Hello" && clientPropertyPublic[1] == "Server");
+			await Task.Run(Wait);
+
+			Assert.IsNotNull(ClientPropertyPublic);
+			Assert.IsTrue(ClientPropertyPublic[0] == "Hello" && ClientPropertyPublic[1] == "Server");
 
 			server.Stop();
 		}
-		#endregion
 
+		#endregion
 
 		#region PropertySynch Event
 
-		public string myProp { get; set; } = "Hello Property";
-		public string myPropClient { get; set; } = "Hello";
+		public string MyProp { get; set; } = "Hello Property";
+		public string MyPropClient { get; set; } = "Hello";
 
-		bool[] checks;
+		private bool[] checks;
 
-		const byte SYNC_ID = 88;
+		private const byte SYNC_ID = 88;
 
 		[TestMethod]
 		public async Task SynchronizationEventClient() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new(new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55551);
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 55551);
+
+			using ManualResetEventSlim localEvnt = new();
 
 			await server.Start(55551);
+
+			server.OnClientConnected += (_, e) => {
+				server.SyncProperty(e.ClientInfo.ID, this, nameof(MyProp), SYNC_ID);
+				localEvnt.Set();
+			};
+
 			await client.ConnectAsync(1000);
+			client.SyncProperty(this, nameof(MyPropClient), SYNC_ID);
 
 			client.OnPropertySynchronized += Client_OnPropertySynchronized;
 
-			server.SyncProperty(1, this, nameof(myProp), SYNC_ID);
+			await Task.Run(localEvnt.Wait);
 
-			client.SyncProperty(this, nameof(myPropClient), SYNC_ID);
+			server.UpdateProp(1, SYNC_ID, MyProp);
 
-			server.UpdateProp(1, SYNC_ID, myProp);
-
-			await Task.Delay(100);
+			await Task.Run(Wait);
 
 			for (int i = 0; i < checks.Length; i++) {
 				Assert.IsTrue(checks[i]);
@@ -78,11 +105,12 @@ namespace Igor.TCP {
 		private void Client_OnPropertySynchronized(object sender, OnPropertySynchronizationEventArgs e) {
 			checks = new bool[3];
 
-			checks[0] = e.PropertyName == nameof(myPropClient);
+			checks[0] = e.PropertyName == nameof(MyPropClient);
 			checks[1] = e.SynchronizationPacketID == SYNC_ID;
-			checks[2] = myProp == myPropClient;
+			checks[2] = MyProp == MyPropClient;
+			evnt.Set();
 		}
-		#endregion
 
+		#endregion
 	}
 }

@@ -9,7 +9,7 @@ namespace Igor.TCP {
 
 		internal event EventHandler<ClientDisconnectedEventArgs> _OnClientDisconnected;
 
-		internal TCPServer server;
+		private readonly TCPServer server;
 
 		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
 			: base(client, serverInfo, clientInfo, server) {
@@ -27,14 +27,14 @@ namespace Igor.TCP {
 			if (data.DataID == DataIDs.CLIENT_DISCONNECTED) {
 				SendingData = false;
 				evnt.Set();
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
 				ListeningForData = false;
-				Dispose();
 				server.connectedClients.Remove(data.SenderID);
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
+				Dispose();
 			}
 			if (data.DataType == typeof(SocketException)) {
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
 				server.connectedClients.Remove(data.SenderID);
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
 			}
 		}
 

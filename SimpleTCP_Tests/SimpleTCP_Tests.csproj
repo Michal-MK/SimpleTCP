@@ -21,6 +21,7 @@
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
     <TargetFrameworkProfile />
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -53,8 +54,8 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Base\TestBase.cs" />
     <Compile Include="ClientTests.cs" />
-    <Compile Include="GeneralFeelTests.cs" />
     <Compile Include="MultipleClientsPerServer_Disconnect.cs" />
     <Compile Include="MultipleClientsPerServer_Reroute.cs" />
     <Compile Include="MultipleClientsPerServer_Connect.cs" />
@@ -73,7 +74,6 @@
     <Compile Include="ServerClientTests_Die.cs" />
     <Compile Include="ServerClientTests_Timeout.cs" />
     <Compile Include="ServerTests.cs" />
-    <Compile Include="FreeTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

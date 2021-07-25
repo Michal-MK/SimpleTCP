@@ -1,16 +1,20 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
-	public partial class ServerClientTests {
-		bool disconnectEvent = false;
+	[TestClass]
+	public class ServerClientTests_Disconnect : TestBase {
+		bool disconnectEvent;
 
 		[TestMethod]
 		public async Task Disconnect() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			using TCPServer server = new (new ServerConfiguration());
+			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
+			// client.SetUpClientInfo(nameof(ServerClientTests_Disconnect));
+			
 			server.OnClientDisconnected += Server_OnClientDisconnected;
 
 			await server.Start(55550);
@@ -18,7 +22,10 @@ namespace Igor.TCP {
 
 			client.Disconnect();
 
-			await Task.Delay(100);
+			await Task.Run(Wait);
+			// if (server.ConnectedClients.Length > 0) {
+			// 	Debug.WriteLine("A " + server.ConnectedClients[0].Name);
+			// }
 			Assert.IsTrue(server.ConnectedClients.Length == 0);
 			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(1); });
 			Assert.IsNull(client.Connection);
@@ -29,6 +36,7 @@ namespace Igor.TCP {
 
 		private void Server_OnClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
 			disconnectEvent = true;
+			evnt.Set();
 		}
 	}
 }

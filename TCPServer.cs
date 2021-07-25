@@ -244,9 +244,8 @@ namespace Igor.TCP {
 
 				byte[] packetHeader = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
 
-				int bytesRead = 0;
 				try {
-					bytesRead = await newStream.ReadAsync(packetHeader, 0, packetHeader.Length);
+					await newStream.ReadAsync(packetHeader, 0, packetHeader.Length);
 				}
 				catch {
 					continue;
@@ -259,8 +258,7 @@ namespace Igor.TCP {
 
 				try {
 					while (pos != clientInfo.Length) {
-						bytesRead = await newStream.ReadAsync(clientInfo, pos, clientInfo.Length);
-						pos += bytesRead;
+						pos += await newStream.ReadAsync(clientInfo, pos, clientInfo.Length);
 					}
 				}
 				catch {

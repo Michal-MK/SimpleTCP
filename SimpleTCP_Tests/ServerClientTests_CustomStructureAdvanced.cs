@@ -37,21 +37,20 @@ namespace Igor.TestData {
 }
 
 namespace Igor.TCP {
-	public partial class ServerClientTests {
+	[TestClass]
+	public class ServerClientTests_CustomStructureAdvanced : TestBase {
 		[TestMethod]
 		public async Task CustomStructurePacketAdvanced() {
-			TCPServer server = new TCPServer(new ServerConfiguration());
+			using TCPServer server = new (new ServerConfiguration());
 
-			TCPClient client = new TCPClient(SimpleTCPHelper.GetActiveIPv4Address(), 55550);
-
-			ManualResetEventSlim evnt = new ManualResetEventSlim();
-
+			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
+			
 			await server.Start(55550);
 			const byte PACKET_ID = 4;
 
 			await client.ConnectAsync(1000);
 
-			TestDataStructAdvanced toSend = new TestDataStructAdvanced() {
+			TestDataStructAdvanced toSend = new() {
 				MachineGrid = new[,] {
 					{ new Machine { State = StateEnum.Running, GUID = Guid.NewGuid() }, new Machine { State = StateEnum.Idle, GUID = Guid.NewGuid() } },
 					{ new Machine { State = StateEnum.Broken, GUID = Guid.NewGuid() }, new Machine { State = StateEnum.Broken, GUID = Guid.NewGuid() } }
@@ -66,7 +65,7 @@ namespace Igor.TCP {
 
 			bool result = false;
 
-			server.DefineCustomPacket(1, PACKET_ID, (byte sender, TestDataStructAdvanced value) => {
+			server.DefineCustomPacket(1, PACKET_ID, (byte _, TestDataStructAdvanced value) => {
 				try {
 					Assert.IsTrue(value.Machines.Values
 									   .Select(s => s.GUID)
@@ -85,13 +84,10 @@ namespace Igor.TCP {
 
 			client.Connection.SendData(PACKET_ID, toSend);
 
-			await Task.Run(evnt.Wait);
+			await Task.Run(Wait);
 
 			client.Disconnect();
-			client.Dispose();
-
 			server.Stop();
-			server.Dispose();
 
 			Assert.IsTrue(result);
 		}

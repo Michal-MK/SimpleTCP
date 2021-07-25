@@ -12,7 +12,6 @@ namespace Igor.TCP {
 	/// Base class for all client and server
 	/// </summary>
 	public class TCPConnection : IDisposable {
-
 		#region Public Properties
 
 		/// <summary>
@@ -219,7 +218,7 @@ namespace Igor.TCP {
 				}
 
 				if (data.DataType == typeof(UndefinedPacketEventArgs)) {
-					OnUndefinedPacketReceived?.Invoke(this, new UndefinedPacketEventArgs(data.DataID, (byte[])data.ReceivedObject));
+					OnUndefinedPacketReceived?.Invoke(this, new UndefinedPacketEventArgs(infoAboutOtherSide.ID, data.DataID, (byte[])data.ReceivedObject));
 				}
 
 				#region Primitives
@@ -263,6 +262,7 @@ namespace Igor.TCP {
 		protected virtual void HigherLevelDataReceived(ReceivedData data) { }
 
 		private ReceivedData ReceiveData() {
+
 			#region Working with the stream
 
 #if DEBUG
