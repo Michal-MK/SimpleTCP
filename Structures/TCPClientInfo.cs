@@ -7,6 +7,16 @@ namespace Igor.TCP {
 	/// </summary>
 	[Serializable]
 	public class TCPClientInfo {
+		
+		/// <summary>
+		/// Initialize new <see cref="TCPClientInfo"/>
+		/// </summary>
+		public TCPClientInfo(string computerName, bool isServer, string clientAddress) {
+			IsServer = isServer;
+			Address = clientAddress;
+			Name = computerName;
+		}
+
 		/// <summary>
 		/// Is current client playing the role of the server
 		/// </summary>
@@ -40,17 +50,9 @@ namespace Igor.TCP {
 			}
 			internal set => clientID = value;
 		}
+
 		private byte clientID = 255;
 
 		internal bool IsValid => clientID != 255;
-		
-		/// <summary>
-		/// Initialize new <see cref="TCPClientInfo"/>
-		/// </summary>
-		public TCPClientInfo(string computerName, bool isServer, string clientAddress) {
-			IsServer = isServer;
-			Address = clientAddress;
-			Name = computerName;
-		}
 	}
 }

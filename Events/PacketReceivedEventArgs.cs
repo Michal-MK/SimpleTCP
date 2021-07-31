@@ -5,19 +5,20 @@ namespace Igor.TCP {
 	/// Predefined packets data holder
 	/// </summary>
 	public class PacketReceivedEventArgs<TPacket> : EventArgs {
+		
+		internal PacketReceivedEventArgs(TPacket data, byte clientID) {
+			Data = data;
+			ClientID = clientID;
+		}
+
 		/// <summary>
-		/// Received data
+		/// The received data
 		/// </summary>
 		public TPacket Data { get; }
 
 		/// <summary>
-		/// Packet origin
+		/// The client that sent this packet
 		/// </summary>
 		public byte ClientID { get; }
-
-		internal PacketReceivedEventArgs(TPacket data, byte clientID) {
-			this.Data = data;
-			this.ClientID = clientID;
-		}
 	}
 }

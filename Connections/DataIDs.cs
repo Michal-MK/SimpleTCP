@@ -56,11 +56,11 @@ namespace Igor.TCP {
 
 		#endregion
 
-		internal readonly Dictionary<byte, CustomPacket> customIDs = new Dictionary<byte, CustomPacket>();
-		internal readonly Dictionary<byte, PropertySynchronization> syncedProperties = new Dictionary<byte, PropertySynchronization>();
+		internal readonly Dictionary<byte, CustomPacket> customIDs = new();
+		internal readonly Dictionary<byte, PropertySynchronization> syncedProperties = new();
 
-		internal readonly Dictionary<byte, Type> requestTypeMap = new Dictionary<byte, Type>();
-		internal readonly Dictionary<byte, Delegate> responseFunctionMap = new Dictionary<byte, Delegate>();
+		internal readonly Dictionary<byte, Type> requestTypeMap = new();
+		internal readonly Dictionary<byte, Delegate> responseFunctionMap = new();
 
 		private readonly RequestHandler responseManager;
 
@@ -191,7 +191,7 @@ namespace Igor.TCP {
 		}
 
 		internal void DefineCustomPacket<TData>(byte id, Action<byte, TData> callback) {
-			customIDs.Add(id, new CustomPacket(id, typeof(TData), new Action<byte, object>((b, o) => { callback(b, (TData)o); })));
+			customIDs.Add(id, new CustomPacket(id, typeof(TData), (b, o) => { callback(b, (TData)o); }));
 		}
 
 		internal void RemoveCustomPacket(byte id) {

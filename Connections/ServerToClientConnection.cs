@@ -29,12 +29,12 @@ namespace Igor.TCP {
 				evnt.Set();
 				ListeningForData = false;
 				server.connectedClients.Remove(data.SenderID);
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
+				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
 				Dispose();
 			}
 			if (data.DataType == typeof(SocketException)) {
 				server.connectedClients.Remove(data.SenderID);
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
+				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
 			}
 		}
 
@@ -43,10 +43,10 @@ namespace Igor.TCP {
 		/// </summary>
 		public void DisconnectClient(byte clientID) {
 			if (ListeningForData) {
-				SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, new byte[] { clientID });
+				SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, new[] { clientID });
 				SendingData = false;
 				evnt.Set();
-				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));
+				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));
 				ListeningForData = false;
 				Dispose();
 			}

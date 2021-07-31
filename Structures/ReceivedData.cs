@@ -6,6 +6,13 @@ namespace Igor.TCP {
 	/// Internal data holder that is constructed after parsing all of the bytes
 	/// </summary>
 	public struct ReceivedData {
+		
+		internal ReceivedData(Type dataType, byte senderID, byte dataID, object receivedObject) {
+			DataType = dataType;
+			SenderID = senderID;
+			DataID = dataID;
+			this.ReceivedObject = receivedObject;
+		}
 
 		/// <summary>
 		/// Data type of this data object
@@ -26,12 +33,5 @@ namespace Igor.TCP {
 		/// Received bytes converted into a generic object. Casting to <see cref="DataType"/> is valid.
 		/// </summary>
 		internal object ReceivedObject { get; }
-
-		internal ReceivedData(Type dataType, byte senderID, byte dataID, object receivedObject) {
-			DataType = dataType;
-			SenderID = senderID;
-			DataID = dataID;
-			this.ReceivedObject = receivedObject;
-		}
 	}
 }

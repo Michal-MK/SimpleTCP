@@ -4,6 +4,7 @@
 	/// Class holding data necessary for rerouting packets from client to client
 	/// </summary>
 	internal class ReroutingInfo {
+		
 		internal ReroutingInfo(byte toClient, byte packetID) {
 			ToClient = toClient;
 			PacketID = packetID;

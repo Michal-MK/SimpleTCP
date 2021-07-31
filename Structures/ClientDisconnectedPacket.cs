@@ -1,26 +1,6 @@
 ﻿using Igor.TCP.Enums;
 using System;
 
-namespace Igor.TCP.Enums {
-	/// <summary>
-	/// Reasons for the disconnect
-	/// </summary>
-	public enum DisconnectType {
-		/// <summary>
-		/// Client disconnected successfully
-		/// </summary>
-		Success,
-		/// <summary>
-		/// Client dropped connection to the server
-		/// </summary>
-		Interrupted,
-		/// <summary>
-		/// Client disconnected by server (kicked)
-		/// </summary>
-		Kicked
-	}
-}
-
 namespace Igor.TCP {
 
 	[Serializable]
@@ -32,10 +12,10 @@ namespace Igor.TCP {
 			DisconnectType = disconnectType;
 		}
 
-		public byte Sender { get; }
+		internal byte Sender { get; }
 
-		public byte DisconnectedClientID { get; }
+		internal byte DisconnectedClientID { get; }
 
-		public DisconnectType DisconnectType { get; }
+		internal DisconnectType DisconnectType { get; }
 	}
 }

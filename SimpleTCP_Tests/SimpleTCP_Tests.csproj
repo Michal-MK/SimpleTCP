@@ -59,6 +59,7 @@
     <Compile Include="MultipleClientsPerServer_Disconnect.cs" />
     <Compile Include="MultipleClientsPerServer_Reroute.cs" />
     <Compile Include="MultipleClientsPerServer_Connect.cs" />
+    <Compile Include="MultipleClientsPerServer_SendToAllcs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerClientTests_CustomStructureAdvanced.cs" />
     <Compile Include="ServerClientTests_Kick.cs" />

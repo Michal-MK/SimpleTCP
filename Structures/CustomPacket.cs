@@ -6,6 +6,16 @@ namespace Igor.TCP {
 	/// Class representing a single packet definition
 	/// </summary>
 	internal class CustomPacket {
+		
+		/// <summary>
+		/// Default Constructor
+		/// </summary>
+		internal CustomPacket(byte packetID, Type dataType, Action<byte, object> action) {
+			PacketID = packetID;
+			DataType = dataType;
+			ActionCallback = action;
+		}
+
 		/// <summary>
 		/// The ID of the packet
 		/// </summary>
@@ -20,14 +30,5 @@ namespace Igor.TCP {
 		/// Callback action to receive the selected object
 		/// </summary>
 		internal Action<byte, object> ActionCallback { get; }
-
-		/// <summary>
-		/// Default Constructor
-		/// </summary>
-		internal CustomPacket(byte packetID, Type dataType, Action<byte, object> action) {
-			PacketID = packetID;
-			DataType = dataType;
-			ActionCallback = action;
-		}
 	}
 }

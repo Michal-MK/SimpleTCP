@@ -28,8 +28,8 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Get response type of custom defined packet 'ID'
 		/// </summary>
-		public Type GetResponseType(byte ID) {
-			return connection.dataIDs.requestTypeMap[ID];
+		public Type GetResponseType(byte id) {
+			return connection.dataIDs.requestTypeMap[id];
 		}
 	}
 }

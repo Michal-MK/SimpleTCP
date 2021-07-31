@@ -37,58 +37,58 @@ namespace Igor.TCP {
 			ushort packetID = (ushort)new Random().Next(0, ushort.MaxValue);
 
 			//Init
-			using (Socket rawSock = new Socket(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.Icmp)) {
-				rawSock.Bind(new IPEndPoint(IPAddress.Any, 0));
+			using Socket rawSock = new(AddressFamily.InterNetwork, SocketType.Raw, ProtocolType.Icmp);
+			
+			rawSock.Bind(new IPEndPoint(IPAddress.Any, 0));
 
-				rawSock.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, 255);
-				rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, int.MaxValue);
-				rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, int.MaxValue);
-				rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
+			rawSock.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.IpTimeToLive, 255);
+			rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.SendTimeout, int.MaxValue);
+			rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReceiveTimeout, int.MaxValue);
+			rawSock.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ExclusiveAddressUse, false);
 
-				HashSet<PingerHost> aliveIPs = new HashSet<PingerHost>();
+			HashSet<PingerHost> aliveIPs = new();
 
-				//** Receiver **
-				Task receiver = Task.Factory.StartNew(() => {
-					byte[] received = new byte[64];
-					EndPoint remoteAddress = new IPEndPoint(IPAddress.Any, 0);
+			//** Receiver **
+			Task receiver = Task.Factory.StartNew(() => {
+				byte[] received = new byte[64];
+				EndPoint remoteAddress = new IPEndPoint(IPAddress.Any, 0);
 
-					while (true) {
-						try {
-							rawSock.ReceiveFrom(received, ref remoteAddress);
-						}
-						catch { return; }
-
-						ushort replyId = BitConverter.ToUInt16(received, IP_HEADER_LEN + OFFSET_ID);
-						if (received[IP_HEADER_LEN] == ICMP_ECHO_REPLY && replyId == packetID) {
-							long ticksInPong = BitConverter.ToInt64(received, IP_HEADER_LEN + ICMP_HEADER_LEN);
-							int duration = (int)((DateTime.Now.Ticks - ticksInPong) / TimeSpan.TicksPerMillisecond);
-							PingerHost host = new PingerHost(((IPEndPoint)remoteAddress).Address.ToString(), duration);
-
-							lock (aliveIPs) {
-								aliveIPs.Add(host);
-							}
-						}
-					}
-				}, TaskCreationOptions.LongRunning);
-
-				Task.Yield(); //Give a chance to listener task to start.
-
-				//** Sender **
-				foreach (var ip in GetIPAddresses(subNets)) {
-					byte[] packet = CreatePacket(packetID, BitConverter.GetBytes(DateTime.Now.Ticks));
-					IPEndPoint dest = new IPEndPoint(IPAddress.Parse(ip), 0);
+				while (true) {
 					try {
-						rawSock.SendTo(packet, dest);
+						rawSock.ReceiveFrom(received, ref remoteAddress);
 					}
-					catch (Exception ex) {
-						Console.WriteLine(ex.Message);
-						Console.WriteLine($"==>{ip}");
+					catch { return; }
+
+					ushort replyId = BitConverter.ToUInt16(received, IP_HEADER_LEN + OFFSET_ID);
+					if (received[IP_HEADER_LEN] == ICMP_ECHO_REPLY && replyId == packetID) {
+						long ticksInPong = BitConverter.ToInt64(received, IP_HEADER_LEN + ICMP_HEADER_LEN);
+						int duration = (int)((DateTime.Now.Ticks - ticksInPong) / TimeSpan.TicksPerMillisecond);
+						PingerHost host = new(((IPEndPoint)remoteAddress).Address.ToString(), duration);
+
+						lock (aliveIPs) {
+							aliveIPs.Add(host);
+						}
 					}
 				}
+			}, TaskCreationOptions.LongRunning);
 
-				Task.WaitAny(receiver, Task.Delay(timeOut));
-				return aliveIPs;
+			Task.Yield(); //Give a chance to listener task to start.
+
+			//** Sender **
+			foreach (string ip in GetIPAddresses(subNets)) {
+				byte[] packet = CreatePacket(packetID, BitConverter.GetBytes(DateTime.Now.Ticks));
+				IPEndPoint dest = new IPEndPoint(IPAddress.Parse(ip), 0);
+				try {
+					rawSock.SendTo(packet, dest);
+				}
+				catch (Exception ex) {
+					Console.WriteLine(ex.Message);
+					Console.WriteLine($"==>{ip}");
+				}
 			}
+
+			Task.WaitAny(receiver, Task.Delay(timeOut));
+			return aliveIPs;
 		}
 
 		public static Task<IEnumerable<PingerHost>> PingAllAsync(string subNets, int timeout = 1500) {
@@ -106,7 +106,6 @@ namespace Igor.TCP {
 
 			return packet;
 		}
-
 
 		private static ushort GetChecksum(byte[] bytes) {
 			ulong sum = 0;

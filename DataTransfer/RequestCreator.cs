@@ -4,8 +4,8 @@ using System.Threading.Tasks;
 
 namespace Igor.TCP {
 	internal class RequestCreator : IDisposable {
-		internal TCPConnection connection;
-		internal ManualResetEventSlim evnt = new ManualResetEventSlim();
+		private readonly TCPConnection connection;
+		private readonly ManualResetEventSlim evnt = new();
 
 		internal RequestCreator(TCPConnection connection) {
 			this.connection = connection;
@@ -13,11 +13,10 @@ namespace Igor.TCP {
 
 		private TCPResponse currentResponseObject;
 
-		internal async Task<TCPResponse> Request(byte ID, Type type) {
+		internal async Task<TCPResponse> Request(byte id, Type type) {
 			evnt.Reset();
-			return await Task.Run(delegate () {
-				byte request = ID;
-				connection.SendData(DataIDs.REQUEST_RECEPTION_ID, request);
+			return await Task.Run(() => {
+				connection.SendData(DataIDs.REQUEST_RECEPTION_ID, id);
 				connection.OnResponse += Connection_OnResponse;
 				evnt.Wait();
 				currentResponseObject.DataType = type;
@@ -31,24 +30,16 @@ namespace Igor.TCP {
 		}
 
 		#region IDisposable Support
-		private bool disposedValue = false; // To detect redundant calls
 
-		protected virtual void Dispose(bool disposing) {
-			if (!disposedValue) {
-				evnt.Dispose();
-				disposedValue = true;
-			}
-		}
+		private bool disposedValue;
 
-		~RequestCreator() {
-			Dispose(false);
-		}
-
-		// This code added to correctly implement the disposable pattern.
 		public void Dispose() {
-			Dispose(true);
-			GC.SuppressFinalize(this);
+			if (disposedValue) return;
+
+			evnt.Dispose();
+			disposedValue = true;
 		}
+
 		#endregion
 	}
 }

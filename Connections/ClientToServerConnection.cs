@@ -8,9 +8,9 @@ namespace Igor.TCP {
 	public sealed class ClientToServerConnection : TCPConnection {
 		internal event EventHandler _OnClientKickedFromServer;
 
-		internal TCPClient client;
+		private readonly TCPClient client;
 
-		internal ClientToServerConnection(TcpClient server, TCPClientInfo myInfo, TCPClientInfo serverInfo, TCPClient client)
+		internal ClientToServerConnection(TcpClient server, TCPClientInfo serverInfo, TCPClient client, TCPClientInfo myInfo)
 			: base(server, myInfo, serverInfo, client) {
 			this.client = client;
 		}
@@ -26,17 +26,14 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Handle higher level data that only a Client can react to
 		/// </summary>
-		/// <param name="data"></param>
 		protected override void HigherLevelDataReceived(ReceivedData data) {
 			if (data.DataID == DataIDs.CLIENT_DISCONNECTED) {
 				_OnClientKickedFromServer?.Invoke(client, EventArgs.Empty);
 			}
 			if (data.DataType == typeof(OnPropertySynchronizationEventArgs)) {
-				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs() {
-					SynchronizationPacketID = ((byte[])data.ReceivedObject)[0],
-					PropertyName = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].Property.Name,
-					Instance = client.Connection.dataIDs.syncedProperties[((byte[])data.ReceivedObject)[0]].ClassInstance
-				});
+				byte key = ((byte[])data.ReceivedObject)[0];
+				PropertySynchronization sync = client.Connection.dataIDs.syncedProperties[key];
+				client.InvokeOnPropertySync(this, new OnPropertySynchronizationEventArgs(key, sync));
 			}
 		}
 	}

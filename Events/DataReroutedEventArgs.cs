@@ -7,30 +7,30 @@ namespace Igor.TCP {
 	public class DataReroutedEventArgs : EventArgs {
 
 		internal DataReroutedEventArgs(byte forwardedClient, byte originClient, byte packetID, byte[] data) {
-			this.forwardedClient = forwardedClient;
-			this.originClient = originClient;
-			this.data = data;
-			this.packetID = packetID;
+			ForwardedClient = forwardedClient;
+			OriginClient = originClient;
+			Data = data;
+			PacketID = packetID;
 		}
 
 		/// <summary>
 		/// The client that will receive this packet
 		/// </summary>
-		public byte forwardedClient { get; }
+		public byte ForwardedClient { get; }
 
 		/// <summary>
-		/// The client sent this packet
+		/// The client that sent this packet
 		/// </summary>
-		public byte originClient { get; }
+		public byte OriginClient { get; }
 
 		/// <summary>
 		/// The raw data that were rerouted
 		/// </summary>
-		internal byte[] data { get; }
+		internal byte[] Data { get; }
 
 		/// <summary>
 		/// ID of the packet
 		/// </summary>
-		public byte packetID { get; }
+		public byte PacketID { get; }
 	}
 }

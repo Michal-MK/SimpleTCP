@@ -7,6 +7,7 @@ namespace Igor.TCP {
 	/// </summary>
 	[Serializable]
 	public class TCPResponse {
+		
 		/// <summary>
 		/// Create new response for 'packetID' containing 'rawData'
 		/// </summary>
@@ -15,12 +16,13 @@ namespace Igor.TCP {
 			RawData = rawData;
 			DataType = type;
 		}
+		
 		/// <summary>
-		/// Create new response for 'packetID' with no  data
+		/// Create new response for 'packetID' with no data
 		/// </summary>
 		internal TCPResponse(byte packetID, Type type) {
 			PacketID = packetID;
-			RawData = null;
+			RawData = new byte[0];
 			DataType = type;
 		}
 

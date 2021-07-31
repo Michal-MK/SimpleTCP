@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections.Generic;
 using System.Threading;
-using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -127,10 +125,10 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send user defined byte[] 'data' under 'packetID'
 		/// </summary>
-		/// <exception cref="NotImplementedException"></exception>
+		/// <exception cref="InvalidOperationException">The packet ID is not defined</exception>
 		public void SendData(byte packetID, byte[] data) {
 			if (!dataIDs.customIDs.ContainsKey(packetID)) {
-				throw new NotImplementedException("Trying to send data with " + packetID + ", but this data was not defined!");
+				throw new InvalidOperationException("Trying to send data with " + packetID + ", but this data was not defined!");
 			}
 			SendData(packetID, myInfo.ID, data);
 		}
@@ -138,8 +136,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Send custom data type using internal serialization/deserialization mechanisms
 		/// </summary>
-		/// <exception cref="UndefinedPacketEventArgs"></exception>
-		/// <exception cref="InvalidOperationException"></exception>
+		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable]</exception>
 		public void SendData<TData>(byte packetID, TData data) {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
@@ -158,7 +155,7 @@ namespace Igor.TCP {
 
 		protected ManualResetEventSlim evnt;
 
-		internal void SendDataFromQueue() {
+		private void SendDataFromQueue() {
 			using (evnt = new ManualResetEventSlim()) {
 				while (SendingData) {
 					evnt.Reset();
@@ -180,8 +177,6 @@ namespace Igor.TCP {
 			merged[packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY] = item.OriginClientID; //Append senderID
 			item.RawData.CopyTo(merged, packetSize.Length + DataIDs.PACKET_ID_COMPLEXITY + DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY); //Append the data
 			mainNetworkStream.Write(merged, 0, merged.Length);
-
-			//TODO socket shutdown
 		}
 
 		#endregion
@@ -246,10 +241,7 @@ namespace Igor.TCP {
 				if (data.DataID == DataIDs.RESPONSE_RECEPTION_ID) {
 					OnResponse?.Invoke(this, (TCPResponse)data.ReceivedObject);
 				}
-				else if (data.DataID == DataIDs.REQUEST_RECEPTION_ID) {
-					continue;
-				}
-				else {
+				else if (data.DataID != DataIDs.REQUEST_RECEPTION_ID) {
 					HigherLevelDataReceived(data);
 				}
 			}
@@ -258,7 +250,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Override in specific connection to handle higher level data
 		/// </summary>
-		/// <param name="data">The data received</param>
+		/// <param name="data">The received data</param>
 		protected virtual void HigherLevelDataReceived(ReceivedData data) { }
 
 		private ReceivedData ReceiveData() {
@@ -305,8 +297,8 @@ namespace Igor.TCP {
 
 			#endregion
 
-			byte senderID = GetSenderID(fromClient);
-			byte packetIDSingle = GetPacketID(packetID);
+			byte senderID = fromClient[0];
+			byte packetIDSingle = packetID[0];
 
 			Type dataType = dataIDs.IdentifyID(packetIDSingle, senderID, data);
 			object dataObject;
@@ -338,56 +330,22 @@ namespace Igor.TCP {
 			return new ReceivedData(dataType, senderID, packetIDSingle, dataObject);
 		}
 
-		#region Helpers for getting senderID and packetID from byte[]
-
-		internal static byte GetSenderID(byte[] fromClient) {
-			if (DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY != 1) {
-#pragma warning disable CS0162 // Unreachable code detected
-				Debugger.Break();
-#pragma warning restore CS0162 // Unreachable code detected	
-				throw new Exception();
-			}
-			return fromClient[0];
-		}
-
-		internal static byte GetPacketID(byte[] packetID) {
-			if (DataIDs.PACKET_ID_COMPLEXITY != 1) {
-#pragma warning disable CS0162 // Unreachable code detected
-				Debugger.Break();
-#pragma warning restore CS0162 // Unreachable code detected
-				throw new Exception();
-			}
-			return packetID[0];
-		}
-
-		#endregion
-
 		#endregion
 
 		#region IDisposable Support
 
-		private bool disposedValue = false; // To detect redundant calls
-
-		/// <summary>
-		/// Dispose of the object
-		/// </summary>
-		protected virtual void Dispose(bool disposing) {
-			if (!disposedValue) {
-				requestCreator.Dispose();
-				SendingData = false;
-				evnt.Set();
-				ListeningForData = false;
-				baseClient.Close();
-				baseClient.Dispose();
-				disposedValue = true;
-			}
-		}
-
-		/// <summary>
-		/// Dispose of the object
-		/// </summary>
+		private bool disposedValue;
+		
 		public void Dispose() {
-			Dispose(true);
+			if (disposedValue) return;
+
+			requestCreator.Dispose();
+			SendingData = false;
+			evnt.Set();
+			ListeningForData = false;
+			baseClient.Close();
+			baseClient.Dispose();
+			disposedValue = true;
 		}
 
 		#endregion

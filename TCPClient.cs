@@ -12,7 +12,7 @@ namespace Igor.TCP {
 		private readonly IPAddress address;
 		private readonly ushort port;
 
-		Dictionary<byte, Delegate> IValueProvider.ProvidedValues { get; } = new Dictionary<byte, Delegate>();
+		Dictionary<byte, Delegate> IValueProvider.ProvidedValues { get; } = new();
 
 		/// <summary>
 		/// Information about this client
@@ -23,6 +23,11 @@ namespace Igor.TCP {
 		/// Get connection to the server, allows client to server communication, holds send and receive functionality
 		/// </summary>
 		public ClientToServerConnection Connection { get; private set; }
+
+		/// <summary>
+		/// Is the client connected to a server
+		/// </summary>
+		public bool IsConnected => Connection != null;
 
 		/// <summary>
 		/// Event called whenever a synchronization packet is received
@@ -39,16 +44,14 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(string ipAddress, ushort port)
-			: this(new ConnectionData(ipAddress, port)) {
-		}
+			: this(new ConnectionData(ipAddress, port)) { }
 
 		/// <summary>
 		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
 		/// </summary>
 		/// <exception cref="WebException"></exception>
 		public TCPClient(IPAddress ipAddress, ushort port)
-			: this(new ConnectionData(ipAddress.ToString(), port)) {
-		}
+			: this(new ConnectionData(ipAddress.ToString(), port)) { }
 
 		/// <summary>
 		/// Initialize new <see cref="TCPClient"/> using a <see cref="ConnectionData"/> class
@@ -97,7 +100,7 @@ namespace Igor.TCP {
 
 				await stream.WriteAsync(data, 0, data.Length);
 
-				TCPClientInfo serverInfo = new TCPClientInfo("Server", true, address.ToString()) {
+				TCPClientInfo serverInfo = new("Server", true, address.ToString()) {
 					ID = 0
 				};
 
@@ -105,7 +108,7 @@ namespace Igor.TCP {
 				bool accepted = buffer[0] == Info.ID;
 
 				if (accepted) {
-					Connection = new ClientToServerConnection(clientBase, Info, serverInfo, this);
+					Connection = new ClientToServerConnection(clientBase, serverInfo, this, Info);
 					Connection._OnClientKickedFromServer += OnClientDisconnected;
 				}
 #if DEBUG
@@ -123,7 +126,6 @@ namespace Igor.TCP {
 			}
 		}
 
-
 		/// <summary>
 		/// Quick setup of client meta-data
 		/// </summary>
@@ -132,7 +134,6 @@ namespace Igor.TCP {
 			Info = new TCPClientInfo(clientName, false, address.ToString());
 			return Info;
 		}
-
 
 		/// <summary>
 		/// Set listening for incoming data from the server
@@ -171,7 +172,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Request a provided value from the server
 		/// </summary>
-		/// <exception cref="NoResponseException"></exception>
+		/// <exception cref="NoResponseException">The server returns an unexpected response (e.g. the type is not compatible)</exception>
 		public async Task<T> GetValue<T>(byte packetID) {
 			TCPResponse resp = await Connection.requestCreator.Request(packetID, typeof(T));
 			if (resp.DataType == typeof(NoResponseException)) {
@@ -183,6 +184,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Register custom packet with ID that will carry a TData type, delivered via the callback
 		/// </summary>
+		/// <exception cref="InvalidOperationException">The data type is not marked as [Serializable]</exception>
 		public void DefineCustomPacket<TData>(byte packetID, Action<byte, TData> callback) {
 			if (!typeof(TData).IsSerializable) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
@@ -195,14 +197,14 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Disconnect from current server and dispose of this client
 		/// </summary>
-		/// <exception cref="NullReferenceException"></exception>
+		/// <exception cref="InvalidOperationException">The client is not connected to the server</exception>
 		public void Disconnect() {
-			if (Connection != null) {
+			if (IsConnected) {
 				Connection.DisconnectFromServer(Info.ID);
 				Connection = null;
 			}
 			else {
-				throw new NullReferenceException("Attempting to disconnect from server while this client is not connected to anything...");
+				throw new InvalidOperationException("Attempting to disconnect from server while this client is not connected to anything...");
 			}
 		}
 
@@ -211,7 +213,9 @@ namespace Igor.TCP {
 		}
 
 		public void Dispose() {
-			Connection?.Dispose();
+			if (IsConnected) {
+				Connection.Dispose();
+			}
 		}
 	}
 }
