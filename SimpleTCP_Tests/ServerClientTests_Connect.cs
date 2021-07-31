@@ -12,7 +12,7 @@ namespace Igor.TCP {
 		[TestMethod]
 		public async Task Connect() {
 			using TCPServer server = new (new ServerConfiguration());
-			server.OnClientConnected += Server_OnConnectionEstablished;
+			server.OnClientConnected += Server_OnClientConnected;
 			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
 			await server.Start(55550);
@@ -42,7 +42,7 @@ namespace Igor.TCP {
 			server.Stop();
 		}
 
-		private void Server_OnConnectionEstablished(object sender, ClientConnectedEventArgs e) {
+		private void Server_OnClientConnected(object sender, ClientConnectedEventArgs e) {
 			clientConnectedEventFired = true;
 			evnt.Set();
 		}

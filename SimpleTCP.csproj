@@ -11,6 +11,7 @@
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <LangVersion>default</LangVersion>
         <PackageVersion>1.1.0</PackageVersion>
+        <Nullable>disable</Nullable>
     </PropertyGroup>
     <ItemGroup>
       <Compile Remove="SimpleTCP_Tests\**" />

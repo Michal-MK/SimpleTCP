@@ -13,7 +13,7 @@ namespace Igor.TCP {
 		}
 
 		internal void HandleRequest(TCPRequest request, object obj) {
-			byte[] rawData = SimpleTCPHelper.GetBytesFromObject(obj);
+			byte[] rawData = SimpleTCPHelper.GetBytesFromObject(obj, connection.serializationConfig);
 			HandleRequest(request, rawData);
 		}
 

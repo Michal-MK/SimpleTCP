@@ -18,6 +18,8 @@ namespace Igor.TCP {
 		/// Information about this client
 		/// </summary>
 		public TCPClientInfo Info { get; set; }
+		
+		public ClientConfiguration Configuration { get; }
 
 		/// <summary>
 		/// Get connection to the server, allows client to server communication, holds send and receive functionality
@@ -40,24 +42,30 @@ namespace Igor.TCP {
 		public event EventHandler OnClientDisconnected;
 
 		/// <summary>
-		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
+		/// Initialize new <see cref="TCPClient"/>
 		/// </summary>
+		/// <param name="ipAddress">The IP address to connect to</param>
+		/// <param name="port">the port which to use</param>
+		/// <param name="config">optional configuration for custom serialization of types</param>
 		/// <exception cref="WebException"></exception>
-		public TCPClient(string ipAddress, ushort port)
-			: this(new ConnectionData(ipAddress, port)) { }
+		public TCPClient(string ipAddress, ushort port, ClientConfiguration config = null)
+			: this(new ConnectionData(ipAddress, port), config) { }
 
 		/// <summary>
-		/// Initialize new <see cref="TCPClient"/> with an 'ipAddress' and a 'port'
+		/// Initialize new <see cref="TCPClient"/>
 		/// </summary>
+		/// <param name="ipAddress">The IP address to connect to</param>
+		/// <param name="port">the port which to use</param>
+		/// <param name="config">optional configuration for custom serialization of types</param>
 		/// <exception cref="WebException"></exception>
-		public TCPClient(IPAddress ipAddress, ushort port)
-			: this(new ConnectionData(ipAddress.ToString(), port)) { }
+		public TCPClient(IPAddress ipAddress, ushort port, ClientConfiguration config = null)
+			: this(new ConnectionData(ipAddress.ToString(), port), config) { }
 
 		/// <summary>
 		/// Initialize new <see cref="TCPClient"/> using a <see cref="ConnectionData"/> class
 		/// </summary>
 		/// <exception cref="WebException"></exception>
-		public TCPClient(ConnectionData data) {
+		public TCPClient(ConnectionData data, ClientConfiguration config) {
 			port = data.Port;
 			if (IPAddress.TryParse(data.IPAddress, out address)) {
 #if DEBUG
@@ -68,6 +76,7 @@ namespace Igor.TCP {
 				throw new WebException("Entered Invalid IP Address!", WebExceptionStatus.ConnectFailure);
 			}
 			Info = new TCPClientInfo(Environment.UserName, false, SimpleTCPHelper.GetActiveIPv4Address().ToString());
+			Configuration = config;
 		}
 
 		public async Task<bool> ConnectAsync(int timeout) {
@@ -92,7 +101,7 @@ namespace Igor.TCP {
 
 				Info.ID = buffer[0]; // TODO smarter if length != 1
 
-				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(Info);
+				byte[] clientInfoArray = SimpleTCPHelper.GetBytesFromObject(Info, Configuration);
 				byte[] header = BitConverter.GetBytes(clientInfoArray.LongLength);
 				byte[] data = new byte[header.Length + clientInfoArray.Length];
 				header.CopyTo(data, 0);
@@ -108,7 +117,7 @@ namespace Igor.TCP {
 				bool accepted = buffer[0] == Info.ID;
 
 				if (accepted) {
-					Connection = new ClientToServerConnection(clientBase, serverInfo, this, Info);
+					Connection = new ClientToServerConnection(clientBase, serverInfo, this, Info, Configuration);
 					Connection._OnClientKickedFromServer += OnClientDisconnected;
 				}
 #if DEBUG
@@ -184,9 +193,9 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Register custom packet with ID that will carry a TData type, delivered via the callback
 		/// </summary>
-		/// <exception cref="InvalidOperationException">The data type is not marked as [Serializable]</exception>
+		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable] and is not defined in custom serialization rules</exception>
 		public void DefineCustomPacket<TData>(byte packetID, Action<byte, TData> callback) {
-			if (!typeof(TData).IsSerializable) {
+			if (!typeof(TData).IsSerializable && !Configuration.ContainsSerializationRule(typeof(TData))) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
 			Connection.dataIDs.DefineCustomPacket(packetID, callback);

@@ -1,6 +1,4 @@
-﻿using Igor.TCP;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 
 namespace Igor.TCP {
@@ -8,7 +6,7 @@ namespace Igor.TCP {
 	public class ServerClientTests_Timeout : TestBase {
 		[TestMethod]
 		public async Task Timeout() {
-			using TCPClient client = new(new ConnectionData("192.168.1.222", 6544));
+			using TCPClient client = new(new ConnectionData("192.168.1.222", 6544), new ClientConfiguration());
 			bool res = await client.ConnectAsync(2000);
 
 			if (res) {

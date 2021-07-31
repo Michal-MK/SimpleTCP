@@ -11,8 +11,8 @@ namespace Igor.TCP {
 
 		private readonly TCPServer server;
 
-		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server)
-			: base(client, serverInfo, clientInfo, server) {
+		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server, SerializationConfiguration config)
+			: base(client, serverInfo, clientInfo, server, config) {
 			this.server = server;
 		}
 

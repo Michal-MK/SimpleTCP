@@ -47,9 +47,6 @@
     <Reference Include="Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions, Version=14.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\MSTest.TestFramework.1.4.0\lib\net45\Microsoft.VisualStudio.TestPlatform.TestFramework.Extensions.dll</HintPath>
     </Reference>
-    <Reference Include="SimpleTCP">
-      <HintPath>..\bin\Debug\netstandard2.0\SimpleTCP.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
   </ItemGroup>
@@ -61,6 +58,7 @@
     <Compile Include="MultipleClientsPerServer_Connect.cs" />
     <Compile Include="MultipleClientsPerServer_SendToAllcs.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ServerClientTests_CustomSerialization.cs" />
     <Compile Include="ServerClientTests_CustomStructureAdvanced.cs" />
     <Compile Include="ServerClientTests_Kick.cs" />
     <Compile Include="ServerClientTests_Connect.cs" />
@@ -72,12 +70,17 @@
     <Compile Include="ServerClientTests_CustomStructurePacket.cs" />
     <Compile Include="ServerClientTests_Requests.cs" />
     <Compile Include="ServerClientTests_SendUnknown.cs" />
-    <Compile Include="ServerClientTests_Die.cs" />
     <Compile Include="ServerClientTests_Timeout.cs" />
     <Compile Include="ServerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\SimpleTCP.csproj">
+      <Project>{94bda964-0894-4cf4-80a6-44a1e789f181}</Project>
+      <Name>SimpleTCP</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

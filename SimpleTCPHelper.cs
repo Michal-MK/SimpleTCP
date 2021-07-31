@@ -10,12 +10,8 @@ namespace Igor.TCP {
 	/// Static class containing useful methods for data transmission
 	/// </summary>
 	public static class SimpleTCPHelper {
-		private static readonly IFormatter FORMATTER;
-
-		static SimpleTCPHelper() {
-			FORMATTER = new BinaryFormatter { Binder = new MyBinder() };
-		}
-
+		private static readonly IFormatter FORMATTER = new BinaryFormatter { Binder = new MyBinder() };
+		
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
@@ -30,7 +26,7 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Wrapper to all object to byte[] conversions
 		/// </summary>
-		internal static byte[] GetBytesFromObject(object obj) {
+		internal static byte[] GetBytesFromObject(object obj, SerializationConfiguration serializationConfig) {
 			switch (obj) {
 				case bool bo:    return BitConverter.GetBytes(bo);
 				case byte b:     return new[] { b };
@@ -45,6 +41,12 @@ namespace Igor.TCP {
 				case ulong ul:   return BitConverter.GetBytes(ul);
 				case ushort us:  return BitConverter.GetBytes(us);
 				default: {
+					if (serializationConfig != null) {
+						Type type = obj.GetType();
+						if (serializationConfig.ContainsSerializationRule(type)) {
+							return serializationConfig.SerializeAsObject(type, obj);
+						}
+					}
 					using MemoryStream ms = new();
 					FORMATTER.Serialize(ms, obj);
 					ms.Seek(0, SeekOrigin.Begin);
@@ -53,7 +55,7 @@ namespace Igor.TCP {
 			}
 		}
 
-		internal static object GetObject(Type t, byte[] bytes) {
+		internal static object GetObject(Type t, byte[] bytes, SerializationConfiguration serializationConfig) {
 			object obj;
 
 			if (t == typeof(bool)) {
@@ -94,6 +96,11 @@ namespace Igor.TCP {
 			}
 			else {
 				try {
+					if (serializationConfig != null) {
+						if (serializationConfig.ContainsSerializationRule(t)) {
+							return serializationConfig.DeserializeAsObject(t, bytes);
+						}
+					}
 					using MemoryStream ms = new(bytes);
 					obj = FORMATTER.Deserialize(ms);
 				}
@@ -104,7 +111,7 @@ namespace Igor.TCP {
 			return obj;
 		}
 
-		internal static T GetObject<T>(byte[] bytes) where T : new() {
+		internal static T GetObject<T>(byte[] bytes, SerializationConfiguration serializationConfig) where T : class, new()  {
 			Type tType = typeof(T);
 
 			if (tType == typeof(bool)) {
@@ -138,6 +145,11 @@ namespace Igor.TCP {
 				return (T)Convert.ChangeType(BitConverter.ToUInt16(bytes, 0), typeof(T));
 			}
 			try {
+				if (serializationConfig != null) {
+					if (serializationConfig.ContainsSerializationRule(tType)) {
+						return serializationConfig.Get<T>(tType).Deserialize(bytes);
+					}
+				}
 				using MemoryStream ms = new();
 				ms.Write(bytes, 0, bytes.Length);
 				ms.Seek(0, SeekOrigin.Begin);

@@ -62,13 +62,17 @@ namespace Igor.TCP {
 
 		internal readonly IValueProvider valueProvider;
 
+		internal readonly SerializationConfiguration serializationConfig;
+
 		#endregion
 
-		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide, IValueProvider valueProvider) {
+		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide,
+							   IValueProvider valueProvider, SerializationConfiguration serializationConfig) {
 			this.infoAboutOtherSide = infoAboutOtherSide;
 			this.myInfo = myInfo;
 			this.baseClient = baseClient;
 			this.valueProvider = valueProvider;
+			this.serializationConfig = serializationConfig;
 			queuedData = new Queue<SendQueueItem>();
 
 			mainNetworkStream = baseClient.GetStream();
@@ -138,10 +142,10 @@ namespace Igor.TCP {
 		/// </summary>
 		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable]</exception>
 		public void SendData<TData>(byte packetID, TData data) {
-			if (!typeof(TData).IsSerializable) {
+			if (!typeof(TData).IsSerializable && !serializationConfig.ContainsSerializationRule(typeof(TData))) {
 				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
 			}
-			SendData(packetID, myInfo.ID, SimpleTCPHelper.GetBytesFromObject(data));
+			SendData(packetID, myInfo.ID, SimpleTCPHelper.GetBytesFromObject(data, serializationConfig));
 		}
 
 		/// <summary>
@@ -311,7 +315,7 @@ namespace Igor.TCP {
 			}
 			else if (dataType == typeof(TCPResponse)) {
 				TCPResponse resp;
-				dataObject = resp = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]));
+				dataObject = resp = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]), serializationConfig);
 				Array.Copy(data, 1, resp.RawData, 0, resp.RawData.Length);
 			}
 			else if (dataType == typeof(TCPRequest)) {
@@ -321,10 +325,10 @@ namespace Igor.TCP {
 				dataObject = data;
 			}
 			else if (dataType == typeof(TCPClientInfo)) {
-				dataObject = SimpleTCPHelper.GetObject(dataType, data);
+				dataObject = SimpleTCPHelper.GetObject(dataType, data, serializationConfig);
 			}
 			else {
-				dataObject = SimpleTCPHelper.GetObject(dataIDs.customIDs[packetIDSingle].DataType, data);
+				dataObject = SimpleTCPHelper.GetObject(dataIDs.customIDs[packetIDSingle].DataType, data, serializationConfig);
 			}
 
 			return new ReceivedData(dataType, senderID, packetIDSingle, dataObject);

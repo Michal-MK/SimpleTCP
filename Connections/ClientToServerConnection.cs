@@ -10,8 +10,8 @@ namespace Igor.TCP {
 
 		private readonly TCPClient client;
 
-		internal ClientToServerConnection(TcpClient server, TCPClientInfo serverInfo, TCPClient client, TCPClientInfo myInfo)
-			: base(server, myInfo, serverInfo, client) {
+		internal ClientToServerConnection(TcpClient server, TCPClientInfo serverInfo, TCPClient client, TCPClientInfo myInfo, SerializationConfiguration config)
+			: base(server, myInfo, serverInfo, client, config) {
 			this.client = client;
 		}
 
@@ -19,7 +19,7 @@ namespace Igor.TCP {
 		/// Disconnect and let server know that this client is disconnecting
 		/// </summary>
 		public void DisconnectFromServer(byte myID) {
-			SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, SimpleTCPHelper.GetBytesFromObject(myInfo));
+			SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, SimpleTCPHelper.GetBytesFromObject(myInfo, client.Configuration));
 			Dispose();
 		}
 

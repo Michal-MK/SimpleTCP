@@ -275,7 +275,7 @@ namespace Igor.TCP {
 
 				TCPClientInfo connectedClientInfo;
 				try {
-					connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo);
+					connectedClientInfo = (TCPClientInfo)SimpleTCPHelper.GetObject(typeof(TCPClientInfo), clientInfo, ServerConfiguration);
 				}
 				catch {
 					System.Diagnostics.Debug.WriteLine("Who are you!? Failed Handshake! -> Dropping connection");
@@ -287,7 +287,7 @@ namespace Igor.TCP {
 				TCPClientInfo serverInfo = new("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
 					ID = 0
 				};
-				ServerToClientConnection conn = new(newlyConnected, serverInfo, connectedClientInfo, this);
+				ServerToClientConnection conn = new(newlyConnected, serverInfo, connectedClientInfo, this, ServerConfiguration);
 				conn.dataIDs.rerouter = this;
 				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
 				conn._OnClientDisconnected += ClientDisconnected;
@@ -349,7 +349,7 @@ namespace Igor.TCP {
 		/// <exception cref="InvalidOperationException">When the ID is not connected</exception>
 		public void UpdateProp(byte clientID, byte id, object value) {
 			if (connectedClients.ContainsKey(clientID)) {
-				byte[] rawData = SimpleTCPHelper.GetBytesFromObject(value);
+				byte[] rawData = SimpleTCPHelper.GetBytesFromObject(value, ServerConfiguration);
 				byte[] merged = new byte[rawData.Length + 1];
 				merged[0] = id;
 				rawData.CopyTo(merged, 1);
@@ -405,9 +405,9 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Register custom packet with ID that will carry a TData type, delivered via the callback
 		/// </summary>
-		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable]</exception>
+		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable] and is not defined in custom serialization rules</exception>
 		public void DefineCustomPacket<TData>(byte clientID, byte packetID, Action<byte, TData> callback) {
-			if (!typeof(TData).IsSerializable) {
+			if (!typeof(TData).IsSerializable && !ServerConfiguration.ContainsSerializationRule(typeof(TData))) {
 				throw new InvalidOperationException($"Attempting to define packet for type {typeof(TData).FullName}, but it is not marked [Serializable]");
 			}
 			GetConnection(clientID).dataIDs.DefineCustomPacket(packetID, callback);
@@ -424,7 +424,7 @@ namespace Igor.TCP {
 		/// <exception cref="System.Runtime.Serialization.SerializationException">When data fails to serialize</exception>
 		public void SendToAll<TData>(byte packetID, TData data) {
 			foreach (ServerToClientConnection info in connectedClients.Values) {
-				info.SendData(packetID, info.infoAboutOtherSide.ID, SimpleTCPHelper.GetBytesFromObject(data));
+				info.SendData(packetID, info.infoAboutOtherSide.ID, SimpleTCPHelper.GetBytesFromObject(data, ServerConfiguration));
 			}
 		}
 

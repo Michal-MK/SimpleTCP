@@ -117,7 +117,7 @@ namespace Igor.TCP {
 					byte dataID = data[0];
 					Array.Copy(data, 1, realData, 0, realData.Length);
 					syncedProperties[dataID].Property.SetValue(syncedProperties[dataID].ClassInstance,
-						SimpleTCPHelper.GetObject(syncedProperties[dataID].PropertyType, realData));
+						SimpleTCPHelper.GetObject(syncedProperties[dataID].PropertyType, realData, connection.serializationConfig));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case CLIENT_DISCONNECTED: {
