@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Igor.TCP {
 	public class SerializationConfiguration {
 		public SerializationConfiguration(Dictionary<Type, ICustomSerializer> customSerializers) {
-			CustomSerializers = customSerializers;
+			CustomSerializers = customSerializers ?? new Dictionary<Type, ICustomSerializer>();
 		}
 
 		/// <summary>
@@ -18,8 +18,8 @@ namespace Igor.TCP {
 				return (ICustomSerializer<TData>)CustomSerializers[type];
 			}
 			return null;
-		}	
-		
+		}
+
 		internal object DeserializeAsObject(Type type, byte[] data) {
 			return CustomSerializers[type].GetType()
 										  .GetMethod(nameof(ICustomSerializer<object>.Deserialize))

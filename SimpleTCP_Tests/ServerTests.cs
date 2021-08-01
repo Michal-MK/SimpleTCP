@@ -21,7 +21,7 @@ namespace Igor.TCP {
 			Assert.IsTrue(server.ConnectedClients.Length == 0);
 			Assert.IsTrue(eventFired);
 
-			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(1); });
+			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(1); });
 
 			server.Stop();
 

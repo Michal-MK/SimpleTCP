@@ -9,7 +9,7 @@ namespace Igor.TCP {
 		#region Property synchronization
 
 		public string[] ServerProperty { get; set; } = { "Hello", "Server" };
-		public string[] ClientProperty { get; set; } = null;
+		private string[] ClientProperty { get; set; } = null;
 		
 		private string[] clientPropertyPublic;
 
@@ -43,10 +43,10 @@ namespace Igor.TCP {
 
 			await Task.Run(localEvnt.Wait);
 
-			Assert.ThrowsException<NotImplementedException>(() => { client.SyncProperty(this, "Nonexistent Property Name", PROP_ID); });
+			Assert.ThrowsException<ArgumentException>(() => { client.SyncProperty(this, "Nonexistent Property Name", PROP_ID); });
 
 			client.SyncProperty(this, nameof(ClientPropertyPublic), PROP_ID);
-			Assert.ThrowsException<ArgumentException>(() => { client.SyncProperty(this, nameof(ClientProperty), PROP_ID); });
+			Assert.ThrowsException<InvalidOperationException>(() => { client.SyncProperty(this, nameof(ClientProperty), PROP_ID); });
 
 			server.UpdateProp(1, PROP_ID, ServerProperty);
 

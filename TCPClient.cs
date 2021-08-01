@@ -163,6 +163,8 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Define 'propertyPacketID' for synchronization of public property named 'propertyName' from instance of a class 'instance' 
 		/// </summary>
+		/// <exception cref="InvalidOperationException">The property is not publicly visible</exception>
+		/// <exception cref="ArgumentException">The property name does not exist</exception>
 		public void SyncProperty(object instance, string propertyName, byte propertyPacketID) {
 			Connection.dataIDs.syncedProperties.Add(propertyPacketID, new PropertySynchronization(propertyPacketID, instance, propertyName));
 		}

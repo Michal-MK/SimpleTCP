@@ -35,7 +35,7 @@ namespace Igor.TCP {
 
 			Assert.IsTrue(server.ConnectedClients.Length == 2);
 			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(0); });
-			Assert.ThrowsException<NullReferenceException>(() => { server.GetConnection(3); });
+			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(3); });
 			Assert.IsNotNull(server.GetConnection(client1.Info.ID));
 			Assert.IsNotNull(server.GetConnection(client2.Info.ID));
 
