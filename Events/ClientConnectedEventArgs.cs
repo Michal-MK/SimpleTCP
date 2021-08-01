@@ -1,6 +1,7 @@
 ﻿using System;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Events {
 	/// <summary>
 	/// OnConnectionReceived event arguments
 	/// </summary>

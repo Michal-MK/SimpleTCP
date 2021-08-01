@@ -2,7 +2,7 @@
 using System.Reflection;
 using System.Runtime.Serialization;
 
-namespace Igor.TCP {
+namespace SimpleTCP.DataTransfer {
 	sealed class MyBinder : SerializationBinder {
 		public override Type BindToType(string assemblyName, string typeName) {
 			Type ttd = null;

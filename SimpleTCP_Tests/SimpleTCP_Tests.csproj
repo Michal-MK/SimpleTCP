@@ -8,7 +8,7 @@
     <ProjectGuid>{EE85F07A-8303-4CB5-922C-C8C3A5D39086}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SimpleTCP_Tests</RootNamespace>
+    <RootNamespace>SimpleTCP.Tests</RootNamespace>
     <AssemblyName>SimpleTCP_Tests</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>

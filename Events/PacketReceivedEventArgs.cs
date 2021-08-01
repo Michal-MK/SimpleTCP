@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Events {
 	/// <summary>
 	/// Predefined packets data holder
 	/// </summary>

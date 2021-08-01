@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Exceptions {
 	/// <summary>
 	/// Exception signifying that the packetID is already taken
 	/// </summary>

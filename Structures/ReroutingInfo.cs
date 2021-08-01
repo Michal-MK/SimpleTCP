@@ -1,4 +1,4 @@
-﻿namespace Igor.TCP {
+﻿namespace SimpleTCP.Structures {
 
 	/// <summary>
 	/// Class holding data necessary for rerouting packets from client to client

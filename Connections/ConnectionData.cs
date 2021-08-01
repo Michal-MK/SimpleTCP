@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Connections {
 	/// <summary>
 	/// Holds IP address and port for connection
 	/// </summary>

@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 
 	/// <summary>
 	/// Internal data holder that is constructed after parsing all of the bytes

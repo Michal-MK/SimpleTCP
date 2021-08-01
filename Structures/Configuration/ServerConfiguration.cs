@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using SimpleTCP.DataTransfer.Serialization;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	/// <summary>
 	/// Server configuration class
 	/// </summary>

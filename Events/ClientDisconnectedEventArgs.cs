@@ -1,7 +1,8 @@
 ﻿using System;
-using Igor.TCP.Enums;
+using SimpleTCP.Enums;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Events {
 	/// <summary>
 	/// Client Disconnected event data
 	/// </summary>

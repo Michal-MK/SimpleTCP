@@ -2,8 +2,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 	[TestClass]
 	public class MultipleClientsPerServer_SendToAll : TestBase {
 		private int receivedStringDataCount;

@@ -4,8 +4,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP {
 
 	/// <summary>
 	/// Slight modification to original work from here:

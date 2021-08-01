@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests.Base {
 	public class TestBase {
 		protected readonly ManualResetEventSlim evnt = new();
 

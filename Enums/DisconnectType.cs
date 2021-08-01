@@ -1,4 +1,4 @@
-﻿namespace Igor.TCP.Enums {
+﻿namespace SimpleTCP.Enums {
 	/// <summary>
 	/// Reasons for the disconnect
 	/// </summary>

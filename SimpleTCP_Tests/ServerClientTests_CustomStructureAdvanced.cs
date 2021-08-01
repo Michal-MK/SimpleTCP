@@ -1,12 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using Igor.TestData;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TestData {
+namespace SimpleTCP.Tests {
 	public enum StateEnum {
 		Running,
 		Idle,
@@ -34,9 +34,7 @@ namespace Igor.TestData {
 		public Dictionary<byte, Machine> Machines { get; set; }
 		public Machine[,] MachineGrid { get; set; }
 	}
-}
 
-namespace Igor.TCP {
 	[TestClass]
 	public class ServerClientTests_CustomStructureAdvanced : TestBase {
 		[TestMethod]

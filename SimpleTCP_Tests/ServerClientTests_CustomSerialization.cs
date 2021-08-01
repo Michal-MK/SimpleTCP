@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.DataTransfer.Serialization;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 	[TestClass]
 	public class ServerClientTests_CustomSerialization : TestBase {
 		private Func<int, MyComplexClass> DATA => i => new MyComplexClass {

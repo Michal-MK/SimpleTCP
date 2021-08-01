@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using SimpleTCP.Connections;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.DataTransfer {
 	internal class RequestCreator : IDisposable {
 		private readonly TCPConnection connection;
 		private readonly ManualResetEventSlim evnt = new();

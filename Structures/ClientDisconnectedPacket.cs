@@ -1,7 +1,7 @@
-﻿using Igor.TCP.Enums;
-using System;
+﻿using System;
+using SimpleTCP.Enums;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 
 	[Serializable]
 	internal struct ClientDisconnectedPacket {

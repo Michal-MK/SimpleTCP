@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Reflection;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	internal class PropertySynchronization {
 		
 		/// <summary>

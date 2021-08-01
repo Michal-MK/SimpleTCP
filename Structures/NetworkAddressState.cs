@@ -1,6 +1,6 @@
 ﻿using System.Net;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	public class NetworkAddressState {
 
 		private NetworkAddressState(IPAddress address, bool success) {

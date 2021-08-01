@@ -1,33 +1,22 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
+﻿using System;
 using System.Threading.Tasks;
-using TestDataStruct = Igor.Test.TestDataStruct;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.Test {
+namespace SimpleTCP.Tests {
 	[Serializable]
 	public struct TestDataStruct {
 		public string[] data;
-		public TestData.TestDataTwo[] dataTest;
+		public TestDataTwo[] dataTest;
 	}
-}
 
-namespace Igor.SameTest {
-	[Serializable]
-	public struct TestDataStruct {
-		public string[] data;
-		public TestData.TestDataTwo[] dataTest;
-	}
-}
-
-namespace Igor.TestData {
 	[Serializable]
 	public struct TestDataTwo {
 		public string[] moreData;
 		public int ID;
 	}
-}
 
-namespace Igor.TCP {
 	[TestClass]
 	public class ServerClientTests_CustomStructurePacket : TestBase {
 		[TestMethod]
@@ -45,7 +34,7 @@ namespace Igor.TCP {
 
 			server.ProvideValue(1, PACKET_ID, Get);
 
-			SameTest.TestDataStruct resp = await server.GetValue<SameTest.TestDataStruct>(1, PACKET_ID);
+			TestDataStruct resp = await server.GetValue<TestDataStruct>(1, PACKET_ID);
 
 			Assert.IsTrue(resp.data[0] == "Ahoj");
 			Assert.IsTrue(resp.dataTest[0].ID == 0);
@@ -60,11 +49,11 @@ namespace Igor.TCP {
 			server.Stop();
 		}
 
-		private SameTest.TestDataStruct AlsoGet() {
+		private TestDataStruct AlsoGet() {
 			return new() {
 				data = new[] { "Ahoj" },
 				dataTest = new[] {
-					new TestData.TestDataTwo {
+					new TestDataTwo {
 						ID = 0, moreData = new[] { "Hello" }
 					}
 				}
@@ -75,7 +64,7 @@ namespace Igor.TCP {
 			return new() {
 				data = new[] { "Ahoooooooooooj" },
 				dataTest = new[] {
-					new TestData.TestDataTwo {
+					new TestDataTwo {
 						ID = 0, moreData = new[] { "Hell00000000000" }
 					}
 				}

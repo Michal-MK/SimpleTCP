@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using SimpleTCP.DataTransfer.Serialization;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	public class ClientConfiguration : SerializationConfiguration {
 		public ClientConfiguration(Dictionary<Type, ICustomSerializer> customSerializers = null) : base(customSerializers) { }
 

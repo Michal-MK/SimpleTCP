@@ -1,6 +1,8 @@
 ﻿using System;
+using SimpleTCP.Connections;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.DataTransfer {
 	/// <summary>
 	/// Class handing requests from the other side
 	/// </summary>

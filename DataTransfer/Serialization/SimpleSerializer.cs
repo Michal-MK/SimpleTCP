@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.DataTransfer.Serialization {
 	public class SimpleSerializer<TData> : ICustomSerializer<TData> {
 		
 		private readonly Func<TData, byte[]> serializationFunc;

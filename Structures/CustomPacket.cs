@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 
 	/// <summary>
 	/// Class representing a single packet definition

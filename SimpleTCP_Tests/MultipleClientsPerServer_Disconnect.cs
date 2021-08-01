@@ -1,9 +1,12 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Enums;
+using SimpleTCP.Events;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 	public class MultipleClientsPerServer_Disconnect : TestBase {
 		private bool client1Disconnect;
 		private bool client2Disconnect;
@@ -37,11 +40,11 @@ namespace Igor.TCP {
 
 		private void Server_OnClientDisconnected(object sender, ClientDisconnectedEventArgs e) {
 			if (e.ClientInfo.ID == 1) {
-				client1Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 1 && e.ClientInfo.Name == "Client 1";
+				client1Disconnect = e.DisconnectType == DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 1 && e.ClientInfo.Name == "Client 1";
 				if (client1Disconnect && client2Disconnect) evnt.Set();
 			}
 			else {
-				client2Disconnect = e.DisconnectType == Enums.DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 2 && e.ClientInfo.Name == "Client 2";
+				client2Disconnect = e.DisconnectType == DisconnectType.Success && e.ClientInfo.IsServer == false && e.ClientInfo.ID == 2 && e.ClientInfo.Name == "Client 2";
 				if (client1Disconnect && client2Disconnect) evnt.Set();
 			}
 		}

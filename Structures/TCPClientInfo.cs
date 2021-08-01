@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Net;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	/// <summary>
 	/// Basic information about this client, can be sent to sever
 	/// </summary>

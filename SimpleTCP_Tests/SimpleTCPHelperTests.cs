@@ -2,8 +2,9 @@
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 	[TestClass]
 	public class SimpleTCPHelperTests {
 		[TestMethod]

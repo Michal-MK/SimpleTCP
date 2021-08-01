@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Exceptions {
 	/// <summary>
 	/// Event data for undefined packet ids event
 	/// </summary>

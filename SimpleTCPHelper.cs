@@ -5,8 +5,10 @@ using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
+using SimpleTCP.DataTransfer;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP {
 	/// <summary>
 	/// Static class containing useful methods for data transmission
 	/// </summary>

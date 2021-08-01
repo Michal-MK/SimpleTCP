@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net.Sockets;
+using SimpleTCP.Events;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Connections {
 	/// <summary>
 	/// Server to client connection holder, processes higher level data
 	/// </summary>

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Net.Sockets;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Events {
 	/// <summary>
 	/// Event data provided when the server reaches its capacity
 	/// </summary>

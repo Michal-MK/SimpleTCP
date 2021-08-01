@@ -1,7 +1,9 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 	public class MultipleClientsPerServer_Reroute : TestBase {
 		private bool callbackSuccess;
 		private bool rerouteCallbackSuccess;

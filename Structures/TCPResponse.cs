@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Structures {
 	/// <summary>
 	/// Class containing response data to raised request
 	/// </summary>

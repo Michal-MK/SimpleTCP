@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Runtime.Serialization.Formatters.Binary;
+using SimpleTCP.Connections.Interaces;
+using SimpleTCP.DataTransfer;
+using SimpleTCP.Events;
+using SimpleTCP.Exceptions;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Connections {
 	/// <summary>
 	/// Class holding packet IDs and received data resolution and unpacking
 	/// </summary>

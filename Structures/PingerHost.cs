@@ -1,4 +1,4 @@
-﻿namespace Igor.TCP {
+﻿namespace SimpleTCP.Structures {
 	public class PingerHost {
 		public PingerHost(string ip, int duration) {
 			IP = ip;

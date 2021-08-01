@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using SimpleTCP.Events;
+using SimpleTCP.Structures;
+using SimpleTCP.Tests.Base;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Tests {
 
 	[TestClass]
 	public class ServerClientTests_Connect : TestBase {

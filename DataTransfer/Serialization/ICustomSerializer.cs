@@ -1,4 +1,4 @@
-﻿namespace Igor.TCP {
+﻿namespace SimpleTCP.DataTransfer.Serialization {
 	public interface ICustomSerializer<TData> : ICustomSerializer {
 		TData Deserialize(byte[] data);
 

@@ -1,11 +1,16 @@
 ﻿using System;
-using System.Net.Sockets;
 using System.Collections.Generic;
-using System.Threading;
 using System.IO;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
+using SimpleTCP.Connections.Interaces;
+using SimpleTCP.DataTransfer;
+using SimpleTCP.Events;
+using SimpleTCP.Exceptions;
+using SimpleTCP.Structures;
 
-namespace Igor.TCP {
+namespace SimpleTCP.Connections {
 	/// <summary>
 	/// Base class for all client and server
 	/// </summary>
