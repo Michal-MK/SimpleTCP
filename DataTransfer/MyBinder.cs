@@ -5,7 +5,6 @@ using System.Runtime.Serialization;
 namespace SimpleTCP.DataTransfer {
 	sealed class MyBinder : SerializationBinder {
 		public override Type BindToType(string assemblyName, string typeName) {
-			Type ttd = null;
 			string currentExecutingAssembly = Assembly.GetExecutingAssembly().FullName;
 			bool isSystemType = !assemblyName.Contains("PublicKeyToken=null");
 
@@ -20,10 +19,9 @@ namespace SimpleTCP.DataTransfer {
 					split[1] = " " + wantedAssemblyName;
 					typeName = string.Join(",", split);
 				}
-				ttd = assembly.GetType(typeName);
-				break;
+				return assembly.GetType(typeName);
 			}
-			return ttd;
+			throw new ArgumentException($"Failed binding to type! Type name: {typeName}, from assembly {assemblyName}"); // TODO
 		}
 	}
 }

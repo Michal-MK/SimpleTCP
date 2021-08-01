@@ -3,13 +3,13 @@ using SimpleTCP.Structures;
 
 namespace SimpleTCP.Events {
 	/// <summary>
-	/// Event data holding basic information about an ongoing synchronization of a property
+	/// Event data provided when a property synchronization occurs
 	/// </summary>
 	public class OnPropertySynchronizationEventArgs : EventArgs {
 		
 		internal OnPropertySynchronizationEventArgs(byte synchronizationPacketID, PropertySynchronization sync) {
 			SynchronizationPacketID = synchronizationPacketID;
-			PropertyName = sync.Property.Name;
+			PropertyName = sync.Property!.Name;
 			Instance = sync.ClassInstance;
 		}
 

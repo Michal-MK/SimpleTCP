@@ -2,7 +2,7 @@
 
 namespace SimpleTCP.Events {
 	/// <summary>
-	/// Predefined packets data holder
+	/// Event data provided when a packet arrives
 	/// </summary>
 	public class PacketReceivedEventArgs<TPacket> : EventArgs {
 		

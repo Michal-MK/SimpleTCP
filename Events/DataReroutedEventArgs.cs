@@ -2,7 +2,7 @@
 
 namespace SimpleTCP.Events {
 	/// <summary>
-	/// Basic rerouting information
+	/// Event data provided when data is rerouted by the server
 	/// </summary>
 	public class DataReroutedEventArgs : EventArgs {
 

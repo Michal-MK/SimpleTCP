@@ -40,11 +40,6 @@ namespace SimpleTCP.Connections {
 		internal const byte PROPERTY_SYNC_ID = 252;
 
 		/// <summary>
-		/// Packet ID for sending client information to the other side
-		/// </summary>
-		internal const byte CLIENT_INFORMATION_ID = 253;
-
-		/// <summary>
 		/// Packet ID to signalize client disconnect
 		/// </summary>
 		internal const byte CLIENT_DISCONNECTED = 254;
@@ -56,7 +51,7 @@ namespace SimpleTCP.Connections {
 
 		internal const byte PACKET_TOTAL_HEADER_SIZE_COMPLEXITY = 8;
 
-		internal const byte PACKET_ID_UPPER_LIMIT = 240;
+		private const byte PACKET_ID_UPPER_LIMIT = 240;
 
 		#endregion
 
@@ -66,13 +61,12 @@ namespace SimpleTCP.Connections {
 		internal readonly Dictionary<byte, Type> requestTypeMap = new();
 		internal readonly Dictionary<byte, Delegate> responseFunctionMap = new();
 
+		internal IRerouteCapable? rerouter = null;
+		internal event EventHandler<DataReroutedEventArgs>? OnRerouteRequest;
+		
 		private readonly RequestHandler responseManager;
 
-		internal event EventHandler<DataReroutedEventArgs> OnRerouteRequest;
-
 		private readonly TCPConnection connection;
-
-		internal IRerouteCapable rerouter = null;
 
 		internal DataIDs(TCPConnection connection) {
 			responseManager = new RequestHandler(connection);
@@ -120,8 +114,8 @@ namespace SimpleTCP.Connections {
 					byte[] realData = new byte[data.Length - 1];
 					byte dataID = data[0];
 					Array.Copy(data, 1, realData, 0, realData.Length);
-					syncedProperties[dataID].Property.SetValue(syncedProperties[dataID].ClassInstance,
-						SimpleTCPHelper.GetObject(syncedProperties[dataID].PropertyType, realData, connection.serializationConfig));
+					syncedProperties[dataID].Property!.SetValue(syncedProperties[dataID].ClassInstance,
+						SimpleTCPHelper.GetObject(syncedProperties[dataID].PropertyType!, realData, connection.serializationConfig));
 					return typeof(OnPropertySynchronizationEventArgs);
 				}
 				case CLIENT_DISCONNECTED: {
@@ -141,23 +135,22 @@ namespace SimpleTCP.Connections {
 		/// </summary>
 		internal bool IsIDReserved(byte packetID, out Type dataType, out string message) {
 
-			//Primitives provided by the server
-			if (packetID == STRING_ID) {
-				dataType = typeof(string);
-				message = $"This ID is taken by a primitive {nameof(String)} sending packet, use OnStringReceived event";
-				return true;
-			}
-			if (packetID == INT64_ID) {
-				dataType = typeof(Int64);
-				message = $"This ID is taken by a primitive {nameof(Int64)} sending packet, use OnInt64Received event";
-				return true;
-			}
+			switch (packetID) {
+				//Primitives provided by the server
+				case STRING_ID:
+					dataType = typeof(string);
+					message = $"This ID is taken by a primitive {nameof(String)} sending packet, use OnStringReceived event";
+					return true;
+				case INT64_ID:
+					dataType = typeof(Int64);
+					message = $"This ID is taken by a primitive {nameof(Int64)} sending packet, use OnInt64Received event";
+					return true;
 
-			//Internal stuff
-			if (packetID > PACKET_ID_UPPER_LIMIT) {
-				dataType = typeof(object);
-				message = $"IDs higher than {PACKET_ID_UPPER_LIMIT} are reserved for internal use!";
-				return true;
+				//Internal stuff
+				case > PACKET_ID_UPPER_LIMIT:
+					dataType = typeof(object);
+					message = $"IDs higher than {PACKET_ID_UPPER_LIMIT} are reserved for internal use!";
+					return true;
 			}
 
 			//Dictionary
@@ -171,14 +164,14 @@ namespace SimpleTCP.Connections {
 				message = "This ID is taken by a packet for general data transmit";
 				return true;
 			}
-			dataType = null;
+			dataType = typeof(Type);
 			message = "This ID is available!";
 			return false;
 		}
 
 		private bool Reroute(byte id, byte fromClient, byte[] data) {
-			if (rerouter.RerouteDefinitions.ContainsKey(id)) {
-				ReroutingInfo info = null;
+			if (rerouter!.RerouteDefinitions.ContainsKey(id)) {
+				ReroutingInfo? info = null;
 				for (int i = 0; i < rerouter.RerouteDefinitions[id].Count; i++) {
 					if (responseManager.connection.myInfo.ID != rerouter.RerouteDefinitions[id][i].ToClient) {
 						info = rerouter.RerouteDefinitions[id][i];
@@ -198,20 +191,17 @@ namespace SimpleTCP.Connections {
 			customIDs.Add(id, new CustomPacket(id, typeof(TData), (b, o) => { callback(b, (TData)o); }));
 		}
 
-		internal void RemoveCustomPacket(byte id) {
-			customIDs.Remove(id);
-		}
-
 		internal void SetForRerouting(ReroutingInfo info) {
-			if (!rerouter.RerouteDefinitions.ContainsKey(info.PacketID)) {
-				rerouter.RerouteDefinitions.Add(info.PacketID, new List<ReroutingInfo>() { info });
+			if (!rerouter!.RerouteDefinitions.ContainsKey(info.PacketID)) {
+				rerouter.RerouteDefinitions.Add(info.PacketID, new List<ReroutingInfo> { info });
 			}
 			else {
-				if (rerouter.RerouteDefinitions[info.PacketID].Find((p) => p.ToClient == info.ToClient && p.PacketID == info.PacketID) == null) {
+				ReroutingInfo def = rerouter.RerouteDefinitions[info.PacketID].Find(p => p.ToClient == info.ToClient && p.PacketID == info.PacketID);
+				if (def == null) {
 					rerouter.RerouteDefinitions[info.PacketID].Add(info);
 					return;
 				}
-				throw new PacketIDTakenException(info.PacketID, null, "Attempted to add a rerouting definition, but such definition already exists!");
+				throw new PacketIDTakenException(info.PacketID, def.GetType(), "Attempted to add a rerouting definition, but such definition already exists!");
 			}
 		}
 	}

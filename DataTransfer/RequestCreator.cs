@@ -6,22 +6,22 @@ using SimpleTCP.Structures;
 
 namespace SimpleTCP.DataTransfer {
 	internal class RequestCreator : IDisposable {
-		private readonly TCPConnection connection;
+		private readonly TCPConnection conn;
 		private readonly ManualResetEventSlim evnt = new();
 
-		internal RequestCreator(TCPConnection connection) {
-			this.connection = connection;
-		}
+		private TCPResponse? currentResponseObject;
 
-		private TCPResponse currentResponseObject;
+		internal RequestCreator(TCPConnection connection) {
+			conn = connection;
+		}
 
 		internal async Task<TCPResponse> Request(byte id, Type type) {
 			evnt.Reset();
 			return await Task.Run(() => {
-				connection.SendData(DataIDs.REQUEST_RECEPTION_ID, id);
-				connection.OnResponse += Connection_OnResponse;
+				conn.SendData(DataIDs.REQUEST_RECEPTION_ID, id);
+				conn.OnResponse += Connection_OnResponse;
 				evnt.Wait();
-				currentResponseObject.DataType = type;
+				currentResponseObject!.DataType = type;
 				return currentResponseObject;
 			});
 		}

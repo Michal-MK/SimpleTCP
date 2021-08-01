@@ -4,7 +4,7 @@ using SimpleTCP.DataTransfer.Serialization;
 
 namespace SimpleTCP.Structures {
 	public class SerializationConfiguration {
-		public SerializationConfiguration(Dictionary<Type, ICustomSerializer> customSerializers) {
+		protected SerializationConfiguration(Dictionary<Type, ICustomSerializer>? customSerializers) {
 			CustomSerializers = customSerializers ?? new Dictionary<Type, ICustomSerializer>();
 		}
 
@@ -19,7 +19,7 @@ namespace SimpleTCP.Structures {
 		/// </summary>
 		/// <typeparam name="TData">The type for which to find a serializer</typeparam>
 		/// <returns>The <see cref="ICustomSerializer"/> implementation</returns>
-		public ICustomSerializer<TData> Get<TData>() {
+		public ICustomSerializer<TData>? Get<TData>() {
 			Type tDataType = typeof(TData);
 			if (CustomSerializers.ContainsKey(tDataType)) {
 				return (ICustomSerializer<TData>)CustomSerializers[tDataType];

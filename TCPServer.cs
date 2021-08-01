@@ -18,10 +18,10 @@ namespace SimpleTCP {
 	public class TCPServer : IDisposable, IValueProvider, IRerouteCapable {
 		internal readonly Dictionary<byte, ServerToClientConnection> connectedClients = new();
 
-		private IPAddress currentAddress;
+		private IPAddress? currentAddress;
 		private ushort currentPort;
 
-		private TcpListener clientConnectionListener;
+		private TcpListener? clientConnectionListener;
 		private bool listenForClientConnections;
 
 		private readonly ManualResetEventSlim serverStartEvnt = new();
@@ -42,38 +42,48 @@ namespace SimpleTCP {
 		/// <summary>
 		/// Called when client connects to this server
 		/// </summary>
-		public event EventHandler<ClientConnectedEventArgs> OnClientConnected;
+		public event EventHandler<ClientConnectedEventArgs>? OnClientConnected;
 
 		/// <summary>
 		/// Called when client disconnects from this server
 		/// </summary>
-		public event EventHandler<ClientDisconnectedEventArgs> OnClientDisconnected;
+		public event EventHandler<ClientDisconnectedEventArgs>? OnClientDisconnected;
 
 		/// <summary>
 		/// Called when server reroutes data
 		/// </summary>
-		public event EventHandler<DataReroutedEventArgs> OnDataRerouted;
+		public event EventHandler<DataReroutedEventArgs>? OnDataRerouted;
 
 		/// <summary>
 		/// Called when the server successfully starts
 		/// </summary>
-		public event EventHandler OnServerStarted;
+		public event EventHandler? OnServerStarted;
 
 		/// <summary>
 		/// Called when client connects to this server, but the capacity is full,
 		/// allows to optionally kick other clients to make space for this one
 		/// </summary>
-		public event EventHandler<FullCapacityEventArgs> OnFullCapacity;
+		public event EventHandler<FullCapacityEventArgs>? OnFullCapacity;
 
 		/// <summary>
 		/// Called when the client attempts to join the server
 		/// </summary>
-		public Func<TCPClientInfo, bool> OnClientConnectionAttempt { get; } = info => true;
+		public event EventHandler<ClientConnectionAttemptEventArgs>? OnClientConnectionAttempt;
 
 		/// <summary>
 		/// Get all connected clients
 		/// </summary>
 		public TCPClientInfo[] ConnectedClients => connectedClients.Select(s => s.Value.infoAboutOtherSide).ToArray();
+
+		/// <summary>
+		/// The specified or assigned port (if <see langword="0"/> was passed in during setup)
+		/// </summary>
+		public ushort Port => currentPort;
+
+		/// <summary>
+		/// The specified IP address
+		/// </summary>
+		public IPAddress? IP => currentAddress;
 
 		/// <summary>
 		/// Create new <see cref="TCPServer"/>
@@ -87,6 +97,7 @@ namespace SimpleTCP {
 		/// <summary>
 		/// Start server using specified 'port' and internally found IP
 		/// </summary>
+		/// <param name="port">The port to use, if 0 is specified a free port is assigned by the system</param>
 		/// <exception cref="ServerStartException">The port is already in use</exception>
 		public async Task Start(ushort port) {
 			currentAddress = SimpleTCPHelper.GetActiveIPv4Address();
@@ -119,7 +130,9 @@ namespace SimpleTCP {
 		/// </summary>
 		/// <exception cref="ServerStartException">The address is invalid or the port is already in use</exception>
 		private async Task StartServer(IPAddress address, ushort port) {
-			currentPort = port;
+			if (port != 0) {
+				currentPort = port;
+			}
 			try {
 				System.Diagnostics.Debug.WriteLine(address);
 				listenForClientConnections = true;
@@ -136,8 +149,11 @@ namespace SimpleTCP {
 		/// Stops the server
 		/// </summary>
 		public void Stop() {
+			if (!IsListeningForClients) return;
 			listenForClientConnections = false;
-			clientConnectionListener.Stop();
+			clientConnectionListener!.Stop();
+			clientConnectionListener.Server.Close();
+			clientConnectionListener.Server.Dispose();
 			foreach (ServerToClientConnection connection in connectedClients.Values) {
 				connection.DisconnectClient(connection.infoAboutOtherSide.ID);
 			}
@@ -209,11 +225,11 @@ namespace SimpleTCP {
 		public bool IsListeningForClients {
 			get => listenForClientConnections;
 			set {
-				if (!listenForClientConnections && value) {
+				if (!listenForClientConnections && value && currentAddress != null) {
 					_ = StartServer(currentAddress, currentPort);
 				}
 				if (!value) {
-					clientConnectionListener.Stop();
+					clientConnectionListener?.Stop();
 				}
 				listenForClientConnections = value;
 			}
@@ -222,11 +238,20 @@ namespace SimpleTCP {
 		private async Task ListenForClientConnection(IPAddress address, ushort port) {
 			clientConnectionListener = new TcpListener(address, port);
 			clientConnectionListener.Start();
+			if (port == 0) {
+				currentPort = (ushort)((IPEndPoint)clientConnectionListener.LocalEndpoint).Port;
+			}
 			serverStartEvnt.Set();
 			while (listenForClientConnections) {
 				TcpClient newlyConnected;
 				try {
-					newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
+					if (clientConnectionListener.Pending()) {
+						newlyConnected = await clientConnectionListener.AcceptTcpClientAsync();
+					}
+					else {
+						await Task.Delay(ServerConfiguration.ClientListenerPollInterval);
+						continue;
+					}
 				}
 				catch (SocketException e) {
 					if (e.SocketErrorCode == SocketError.Interrupted) {
@@ -288,16 +313,17 @@ namespace SimpleTCP {
 					continue;
 				}
 
-
-				TCPClientInfo serverInfo = new("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
-					ID = 0
-				};
-				ServerToClientConnection conn = new(newlyConnected, serverInfo, connectedClientInfo, this, ServerConfiguration);
-				conn.dataIDs.rerouter = this;
-				conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
-				conn._OnClientDisconnected += ClientDisconnected;
-				bool accepted = OnClientConnectionAttempt(connectedClientInfo);
-				if (accepted) {
+				ClientConnectionAttemptEventArgs args = new(connectedClientInfo);
+				OnClientConnectionAttempt?.Invoke(this, args);
+				
+				if (args.Allow) {
+					TCPClientInfo serverInfo = new("Server", true, SimpleTCPHelper.GetActiveIPv4Address().ToString()) {
+						ID = 0
+					};
+					ServerToClientConnection conn = new(newlyConnected, serverInfo, connectedClientInfo, this, ServerConfiguration, ClientDisconnected);
+					conn.dataIDs.rerouter = this;
+					conn.dataIDs.OnRerouteRequest += DataIDs_OnRerouteRequest;
+					
 					try {
 						await newStream.WriteAsync(new[] { id }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
 						connectedClients.Add(id, conn);
@@ -310,6 +336,8 @@ namespace SimpleTCP {
 				}
 				else {
 					newStream.Write(new[] { byte.MaxValue }, 0, DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY);
+					newlyConnected.Close();
+					newlyConnected.Dispose();
 				}
 			}
 		}
@@ -403,7 +431,7 @@ namespace SimpleTCP {
 		/// Define rerouting of all packets from 'fromClient' coming to this server identified as 'packetID', to be sent to 'toClient'
 		/// </summary>
 		public void DefineRerouteID(byte fromClient, byte toClient, byte packetID) {
-			ReroutingInfo info = new ReroutingInfo(toClient, packetID);
+			ReroutingInfo info = new(toClient, packetID);
 			GetConnection(fromClient).dataIDs.SetForRerouting(info);
 		}
 
@@ -427,7 +455,9 @@ namespace SimpleTCP {
 		/// </summary>
 		/// <exception cref="InvalidOperationException">One of the clients does not understand the data being sent</exception>
 		/// <exception cref="System.Runtime.Serialization.SerializationException">When data fails to serialize</exception>
+		/// <exception cref="ArgumentNullException">The data to send is <see langword="null"/></exception>
 		public void SendToAll<TData>(byte packetID, TData data) {
+			if (data == null) throw new ArgumentNullException(nameof(data), "Cannot send null!");
 			foreach (ServerToClientConnection info in connectedClients.Values) {
 				info.SendData(packetID, info.infoAboutOtherSide.ID, SimpleTCPHelper.GetBytesFromObject(data, ServerConfiguration));
 			}
@@ -456,11 +486,14 @@ namespace SimpleTCP {
 		#region IDisposable Support
 
 		private bool disposedValue;
-		
+
 		public void Dispose() {
 			if (disposedValue) return;
 
 			serverStartEvnt.Dispose();
+			if (IsListeningForClients) {
+				Stop();
+			}
 			disposedValue = true;
 		}
 

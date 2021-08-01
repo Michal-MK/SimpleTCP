@@ -36,16 +36,16 @@ namespace SimpleTCP.Structures {
 		/// <summary>
 		/// The property to keep in sync
 		/// </summary>
-		internal PropertyInfo Property { get; }
+		internal PropertyInfo? Property { get; }
 
 		/// <summary>
 		/// Wrapper to get the type of the property
 		/// </summary>
-		internal Type PropertyType => Property.PropertyType;
+		internal Type? PropertyType => Property?.PropertyType;
 
 		/// <summary>
 		/// Wrapper to get the type of the class instance
 		/// </summary>
-		internal Type ClassInstanceType => Property.DeclaringType;
+		internal Type? ClassInstanceType => Property?.DeclaringType;
 	}
 }

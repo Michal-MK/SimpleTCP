@@ -35,11 +35,11 @@ namespace SimpleTCP.Tests {
 
 			await client.ConnectAsync(1000);
 			
-			client.Connection.OnStringReceived += GetConnection_OnStringReceived;
-			client.Connection.OnInt64Received += GetConnection_OnInt64Received;
+			client.OnStringReceived += GetConnection_OnStringReceived;
+			client.OnInt64Received += GetConnection_OnInt64Received;
 
-			client.Connection.SendData(CLIENT_STRING);
-			client.Connection.SendData(CLIENT_LONG);
+			client.Connection!.SendData(CLIENT_STRING);
+			client.Connection!.SendData(CLIENT_LONG);
 
 			await Task.Run(Wait);
 			Assert.IsTrue(eventsPassed == 4);

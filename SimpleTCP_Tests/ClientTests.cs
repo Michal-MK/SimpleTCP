@@ -28,11 +28,11 @@ namespace SimpleTCP.Tests {
 
 		[TestMethod]
 		public async Task Define() {
-			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), 4245);
 			using TCPServer server = new(new ServerConfiguration());
 			using ManualResetEventSlim localEvnt = new();
 
-			await server.Start(4245);
+			await server.Start(0);
+			using TCPClient client = new(SimpleTCPHelper.GetActiveIPv4Address(), server.Port);
 
 			server.OnClientConnected += (_, e) => {
 				localEvnt.Wait();
@@ -66,6 +66,8 @@ namespace SimpleTCP.Tests {
 				matches++;
 				if (matches == 5) evnt.Set();
 			}
+			
+			server.Stop();
 		}
 
 		[Serializable]

@@ -56,7 +56,7 @@ namespace SimpleTCP.Connections {
 
 		private readonly Queue<SendQueueItem> queuedData;
 
-		internal event EventHandler<TCPResponse> OnResponse;
+		internal event EventHandler<TCPResponse>? OnResponse;
 
 		internal readonly TCPClientInfo myInfo;
 		internal readonly TCPClientInfo infoAboutOtherSide;
@@ -72,12 +72,19 @@ namespace SimpleTCP.Connections {
 		#endregion
 
 		internal TCPConnection(TcpClient baseClient, TCPClientInfo myInfo, TCPClientInfo infoAboutOtherSide,
-							   IValueProvider valueProvider, SerializationConfiguration serializationConfig) {
+							   IValueProvider valueProvider, SerializationConfiguration serializationConfig,
+							   EventHandler<PacketReceivedEventArgs<string>> strReceived,
+							   EventHandler<PacketReceivedEventArgs<long>> int64Received, 
+							   EventHandler<UndefinedPacketEventArgs> undefinedReceived) {
 			this.infoAboutOtherSide = infoAboutOtherSide;
 			this.myInfo = myInfo;
 			this.baseClient = baseClient;
 			this.valueProvider = valueProvider;
 			this.serializationConfig = serializationConfig;
+			OnStringReceived += strReceived;
+			OnInt64Received += int64Received;
+			OnUndefinedPacketReceived += undefinedReceived;
+			
 			queuedData = new Queue<SendQueueItem>();
 
 			mainNetworkStream = baseClient.GetStream();
@@ -120,7 +127,7 @@ namespace SimpleTCP.Connections {
 		/// Send a single byte to the connected device
 		/// </summary>
 		internal void SendData(byte packetID, byte requestID) {
-			SendData(packetID, myInfo.ID, new byte[1] { requestID });
+			SendData(packetID, myInfo.ID, new[] { requestID });
 		}
 
 		/// <summary>
@@ -146,7 +153,11 @@ namespace SimpleTCP.Connections {
 		/// Send custom data type using internal serialization/deserialization mechanisms
 		/// </summary>
 		/// <exception cref="InvalidOperationException">The data is not marked as [Serializable]</exception>
+		/// <exception cref="System.Runtime.Serialization.SerializationException">When data fails to serialize</exception>
+		/// <exception cref="ArgumentNullException">The data to send is <see langword="null"/></exception>
 		public void SendData<TData>(byte packetID, TData data) {
+			if (data == null) throw new ArgumentNullException(nameof(data), "Cannot send null!");
+			
 			if (!typeof(TData).IsSerializable && !serializationConfig.ContainsSerializationRule(typeof(TData))) {
 				throw new InvalidOperationException("Trying to send data that is not marked as [Serializable]");
 			}
@@ -162,18 +173,16 @@ namespace SimpleTCP.Connections {
 
 		#region Queue sending
 
-		protected ManualResetEventSlim evnt;
+		protected readonly ManualResetEventSlim evnt = new();
 
 		private void SendDataFromQueue() {
-			using (evnt = new ManualResetEventSlim()) {
-				while (SendingData) {
-					evnt.Reset();
-					if (queuedData.Count > 0) {
-						SendData(queuedData.Dequeue());
-					}
-					else {
-						evnt.Wait();
-					}
+			while (SendingData) {
+				evnt.Reset();
+				if (queuedData.Count > 0) {
+					SendData(queuedData.Dequeue());
+				}
+				else {
+					evnt.Wait();
 				}
 			}
 		}
@@ -271,7 +280,7 @@ namespace SimpleTCP.Connections {
 #endif
 
 			byte[] packetSize = new byte[DataIDs.PACKET_TOTAL_HEADER_SIZE_COMPLEXITY];
-			byte[] packetID = new byte[DataIDs.PACKET_ID_COMPLEXITY];
+			byte[] packetIDBytes = new byte[DataIDs.PACKET_ID_COMPLEXITY];
 			byte[] fromClient = new byte[DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY];
 
 			Int64 totalReceived = 0;
@@ -279,13 +288,16 @@ namespace SimpleTCP.Connections {
 			while (totalReceived < packetSize.Length && ListeningForData) {
 				totalReceived += mainNetworkStream.Read(packetSize, 0, packetSize.Length);
 				if (totalReceived == 0) {
+#if DEBUG
+					Console.WriteLine("Closing...");
+#endif
 					return new ReceivedData(typeof(SocketException), 0, 0, 0);
 				}
 			}
 			totalReceived = 0;
 			Int64 toReceive = BitConverter.ToInt64(packetSize, 0);
 			while (totalReceived < DataIDs.PACKET_ID_COMPLEXITY) {
-				totalReceived += mainNetworkStream.Read(packetID, 0, DataIDs.PACKET_ID_COMPLEXITY);
+				totalReceived += mainNetworkStream.Read(packetIDBytes, 0, DataIDs.PACKET_ID_COMPLEXITY);
 			}
 			totalReceived = 0;
 			while (totalReceived < DataIDs.CLIENT_IDENTIFICATION_COMPLEXITY && ListeningForData) {
@@ -307,36 +319,41 @@ namespace SimpleTCP.Connections {
 			#endregion
 
 			byte senderID = fromClient[0];
-			byte packetIDSingle = packetID[0];
+			byte packetID = packetIDBytes[0];
 
-			Type dataType = dataIDs.IdentifyID(packetIDSingle, senderID, data);
+			Type dataType = dataIDs.IdentifyID(packetID, senderID, data);
 			object dataObject;
 
-			if (packetIDSingle == DataIDs.STRING_ID) {
-				dataObject = Encoding.UTF8.GetString(data);
-			}
-			else if (packetIDSingle == DataIDs.INT64_ID) {
-				dataObject = BitConverter.ToInt64(data, 0);
-			}
-			else if (dataType == typeof(TCPResponse)) {
-				TCPResponse resp;
-				dataObject = resp = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]), serializationConfig);
-				Array.Copy(data, 1, resp.RawData, 0, resp.RawData.Length);
-			}
-			else if (dataType == typeof(TCPRequest)) {
-				dataObject = data[0];
-			}
-			else if (dataType == typeof(OnPropertySynchronizationEventArgs) || dataType == typeof(UndefinedPacketEventArgs)) {
-				dataObject = data;
-			}
-			else if (dataType == typeof(TCPClientInfo)) {
-				dataObject = SimpleTCPHelper.GetObject(dataType, data, serializationConfig);
-			}
-			else {
-				dataObject = SimpleTCPHelper.GetObject(dataIDs.customIDs[packetIDSingle].DataType, data, serializationConfig);
+			switch (packetID) {
+				case DataIDs.STRING_ID:
+					dataObject = Encoding.UTF8.GetString(data);
+					break;
+				case DataIDs.INT64_ID:
+					dataObject = BitConverter.ToInt64(data, 0);
+					break;
+				default: {
+					if (dataType == typeof(TCPResponse)) {
+						TCPResponse resp;
+						dataObject = resp = new TCPResponse(data[0], new byte[data.Length - 1], ResponseGenerator.GetResponseType(data[0]), serializationConfig);
+						Array.Copy(data, 1, resp.RawData, 0, resp.RawData.Length);
+					}
+					else if (dataType == typeof(TCPRequest)) {
+						dataObject = data[0];
+					}
+					else if (dataType == typeof(OnPropertySynchronizationEventArgs) || dataType == typeof(UndefinedPacketEventArgs)) {
+						dataObject = data;
+					}
+					else if (dataType == typeof(TCPClientInfo)) {
+						dataObject = SimpleTCPHelper.GetObject(dataType, data, serializationConfig);
+					}
+					else {
+						dataObject = SimpleTCPHelper.GetObject(dataIDs.customIDs[packetID].DataType, data, serializationConfig);
+					}
+					break;
+				}
 			}
 
-			return new ReceivedData(dataType, senderID, packetIDSingle, dataObject);
+			return new ReceivedData(dataType, senderID, packetID, dataObject);
 		}
 
 		#endregion
@@ -344,7 +361,7 @@ namespace SimpleTCP.Connections {
 		#region IDisposable Support
 
 		private bool disposedValue;
-		
+
 		public void Dispose() {
 			if (disposedValue) return;
 

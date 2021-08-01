@@ -16,7 +16,7 @@ namespace SimpleTCP.Tests {
 			using TCPServer server = new (new ServerConfiguration());
 			using TCPClient client = new (SimpleTCPHelper.GetActiveIPv4Address(), 55550);
 
-			// client.SetUpClientInfo(nameof(ServerClientTests_Disconnect));
+			client.SetUpClientInfo(nameof(ServerClientTests_Disconnect));
 			
 			server.OnClientDisconnected += Server_OnClientDisconnected;
 
@@ -26,9 +26,7 @@ namespace SimpleTCP.Tests {
 			client.Disconnect();
 
 			await Task.Run(Wait);
-			// if (server.ConnectedClients.Length > 0) {
-			// 	Debug.WriteLine("A " + server.ConnectedClients[0].Name);
-			// }
+
 			Assert.IsTrue(server.ConnectedClients.Length == 0);
 			Assert.ThrowsException<InvalidOperationException>(() => { server.GetConnection(1); });
 			Assert.IsNull(client.Connection);

@@ -80,7 +80,7 @@ namespace SimpleTCP.Tests {
 				}
 			});
 
-			client.Connection.SendData(PACKET_ID, toSend);
+			client.Connection!.SendData(PACKET_ID, toSend);
 
 			await Task.Run(Wait);
 

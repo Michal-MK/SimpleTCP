@@ -14,32 +14,32 @@ namespace SimpleTCP {
 	/// </summary>
 	public static class SimpleTCPHelper {
 		private static readonly IFormatter FORMATTER = new BinaryFormatter { Binder = new MyBinder() };
-		
+
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
 		public static IPAddress GetActiveIPv4Address() {
 			using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-			
+
 			socket.Connect("8.8.8.8", 80);
 			return ((IPEndPoint)socket.LocalEndPoint).Address;
-		}	
-		
+		}
+
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
 		public static async Task<NetworkAddressState> GetActiveIPv4AddressAsync(int timeoutMs = 2000) {
 			using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
-			
+
 			Task timeout = Task.Delay(timeoutMs);
-			
+
 			try {
 				await Task.WhenAny(timeout, socket.ConnectAsync("8.8.8.8", 80));
 			}
 			catch (SocketException) {
 				return NetworkAddressState.Fail();
 			}
-			
+
 			return timeout.IsCompleted ? NetworkAddressState.Fail() : NetworkAddressState.Connected(((IPEndPoint)socket.LocalEndPoint).Address);
 		}
 
@@ -61,11 +61,8 @@ namespace SimpleTCP {
 				case ulong ul:   return BitConverter.GetBytes(ul);
 				case ushort us:  return BitConverter.GetBytes(us);
 				default: {
-					if (serializationConfig != null) {
-						Type type = obj.GetType();
-						if (serializationConfig.ContainsSerializationRule(type)) {
-							return serializationConfig.SerializeAsObject(type, obj);
-						}
+					if (serializationConfig.ContainsSerializationRule(obj.GetType())) {
+						return serializationConfig.SerializeAsObject(obj.GetType(), obj);
 					}
 					using MemoryStream ms = new();
 					FORMATTER.Serialize(ms, obj);
@@ -116,10 +113,8 @@ namespace SimpleTCP {
 			}
 			else {
 				try {
-					if (serializationConfig != null) {
-						if (serializationConfig.ContainsSerializationRule(t)) {
-							return serializationConfig.DeserializeAsObject(t, bytes);
-						}
+					if (serializationConfig.ContainsSerializationRule(t)) {
+						return serializationConfig.DeserializeAsObject(t, bytes);
 					}
 					using MemoryStream ms = new(bytes);
 					obj = FORMATTER.Deserialize(ms);
@@ -131,7 +126,7 @@ namespace SimpleTCP {
 			return obj;
 		}
 
-		internal static T GetObject<T>(byte[] bytes, SerializationConfiguration serializationConfig) where T : new()  {
+		internal static T GetObject<T>(byte[] bytes, SerializationConfiguration serializationConfig) where T : new() {
 			Type tType = typeof(T);
 
 			if (tType == typeof(bool)) {
@@ -165,10 +160,8 @@ namespace SimpleTCP {
 				return (T)Convert.ChangeType(BitConverter.ToUInt16(bytes, 0), typeof(T));
 			}
 			try {
-				if (serializationConfig != null) {
-					if (serializationConfig.ContainsSerializationRule<T>()) {
-						return serializationConfig.Get<T>().Deserialize(bytes);
-					}
+				if (serializationConfig.ContainsSerializationRule<T>()) {
+					return serializationConfig.Get<T>()!.Deserialize(bytes);
 				}
 				using MemoryStream ms = new();
 				ms.Write(bytes, 0, bytes.Length);

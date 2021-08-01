@@ -19,11 +19,13 @@ namespace SimpleTCP.Tests {
 			await server.Start(55550);
 			await client.ConnectAsync(1000);
 
-			client.Connection.SendData(64, (byte)50);
+			client.SendData(64, (byte)50);
 
 			await Task.Run(Wait);
 
 			Assert.IsTrue(sendUnknownEventSuccess);
+
+			server.Stop();
 		}
 
 		private void Server_OnClientConnected(object sender, ClientConnectedEventArgs e) {

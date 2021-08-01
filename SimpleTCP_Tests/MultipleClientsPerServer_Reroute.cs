@@ -4,6 +4,7 @@ using SimpleTCP.Structures;
 using SimpleTCP.Tests.Base;
 
 namespace SimpleTCP.Tests {
+	[TestClass]
 	public class MultipleClientsPerServer_Reroute : TestBase {
 		private bool callbackSuccess;
 		private bool rerouteCallbackSuccess;
@@ -29,7 +30,7 @@ namespace SimpleTCP.Tests {
 			server.DefineCustomPacket<string[]>(1, PACKET, OnServerReceivedStringArray);
 			server.DefineRerouteID(1, 2, PACKET);
 
-			client1.Connection.SendData(PACKET, new[] { "Hello", "World" });
+			client1.SendData(PACKET, new[] { "Hello", "World" });
 			server.GetConnection(1).SendData(PACKET, new[] { "Hello", "World" });
 
 			await Task.Run(Wait);

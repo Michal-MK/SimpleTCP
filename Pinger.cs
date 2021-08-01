@@ -78,7 +78,7 @@ namespace SimpleTCP {
 			//** Sender **
 			foreach (string ip in GetIPAddresses(subNets)) {
 				byte[] packet = CreatePacket(packetID, BitConverter.GetBytes(DateTime.Now.Ticks));
-				IPEndPoint dest = new IPEndPoint(IPAddress.Parse(ip), 0);
+				IPEndPoint dest = new(IPAddress.Parse(ip), 0);
 				try {
 					rawSock.SendTo(packet, dest);
 				}

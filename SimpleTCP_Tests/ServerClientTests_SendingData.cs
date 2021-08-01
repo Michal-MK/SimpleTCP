@@ -22,7 +22,7 @@ namespace SimpleTCP.Tests {
 
 			server.DefineCustomPacket(1, PACKET_ID, (byte _, byte value) => { Assert.IsTrue(value == sentByte); });
 
-			client.Connection.SendData(PACKET_ID, sentByte);
+			client.SendData(PACKET_ID, sentByte);
 
 			server.GetConnection(1).SendData(PACKET_ID, sentByte);
 

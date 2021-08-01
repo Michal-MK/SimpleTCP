@@ -30,7 +30,6 @@ namespace SimpleTCP.Tests {
 
 			Assert.IsTrue(clientConnectedEventFired);
 			Assert.IsTrue(server.ConnectedClients.Length == 1);
-			Assert.IsNotNull(client.Connection);
 
 			Assert.IsTrue(server.ConnectedClients[0].IsServer == false);
 
@@ -38,7 +37,8 @@ namespace SimpleTCP.Tests {
 			Assert.IsTrue(server.ConnectedClients[0].Name == Environment.UserName);
 			Assert.IsTrue(server.ConnectedClients[0].ID == 1);
 
-			Assert.IsTrue(client.Connection.ListeningForData);
+			Assert.IsNotNull(client.Connection);
+			Assert.IsTrue(client.Connection!.ListeningForData);
 			Assert.IsTrue(client.Connection.SendingData);
 			Assert.IsTrue(client.Info.ID == 1);
 

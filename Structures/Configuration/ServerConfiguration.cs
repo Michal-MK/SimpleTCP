@@ -10,17 +10,26 @@ namespace SimpleTCP.Structures {
 		/// <summary>
 		/// Default constructor, select which values you want to modify, the rest is set to defaults
 		/// </summary>
-		public ServerConfiguration(bool allowClientsToRaiseRequestsToServer = false, Dictionary<Type, ICustomSerializer> serializers = null) : base(serializers) {
+		public ServerConfiguration(bool allowClientsToRaiseRequestsToServer = false, int clientListenerPollInterval = 200, 
+								   Dictionary<Type, ICustomSerializer>? serializers = null) 
+			: base(serializers) {
 			ClientCanRequestFromServer = allowClientsToRaiseRequestsToServer;
+			ClientListenerPollInterval = clientListenerPollInterval;
 		}
 
 		/// <summary>
 		/// Allows clients to make requests to the server
 		/// </summary>
 		public bool ClientCanRequestFromServer { get; }
+		
+		/// <summary>
+		/// The number of milliseconds to wait between polling the listener for new client connections
+		/// </summary>
+		public int ClientListenerPollInterval { get; }
 
 		public class Builder {
 			private bool clientToServerRequests;
+			private int listenerPollInterval = 200;
 			private readonly Dictionary<Type, ICustomSerializer> serializers = new();
 
 			/// <summary>
@@ -35,7 +44,7 @@ namespace SimpleTCP.Structures {
 			/// Convert the current builder state to the final <see cref="ClientConfiguration"/> instance 
 			/// </summary>
 			public ServerConfiguration Build() {
-				return new(clientToServerRequests, serializers);
+				return new(clientToServerRequests, listenerPollInterval, serializers);
 			}
 
 			/// <summary>
@@ -43,6 +52,14 @@ namespace SimpleTCP.Structures {
 			/// </summary>
 			public Builder AllowClientToServerRequests() {
 				clientToServerRequests = true;
+				return this;
+			}
+			
+			/// <summary>
+			/// Allows clients to make requests to the server
+			/// </summary>
+			public Builder PollInterval(int milliseconds) {
+				listenerPollInterval = milliseconds;
 				return this;
 			}
 			

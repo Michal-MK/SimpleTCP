@@ -4,7 +4,7 @@ using SimpleTCP.Structures;
 
 namespace SimpleTCP.Events {
 	/// <summary>
-	/// Client Disconnected event data
+	/// Event data provided when client disconnects form the server
 	/// </summary>
 	public class ClientDisconnectedEventArgs: EventArgs {
 

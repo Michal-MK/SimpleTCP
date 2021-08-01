@@ -4,7 +4,7 @@ using SimpleTCP.DataTransfer.Serialization;
 
 namespace SimpleTCP.Structures {
 	public class ClientConfiguration : SerializationConfiguration {
-		public ClientConfiguration(Dictionary<Type, ICustomSerializer> customSerializers = null) : base(customSerializers) { }
+		public ClientConfiguration(Dictionary<Type, ICustomSerializer>? customSerializers = null) : base(customSerializers) { }
 
 		/// <summary>
 		/// Builder pattern class for creating <see cref="ClientConfiguration"/>s

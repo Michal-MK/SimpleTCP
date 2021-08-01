@@ -8,14 +8,17 @@ namespace SimpleTCP.Connections {
 	/// Server to client connection holder, processes higher level data
 	/// </summary>
 	public sealed class ServerToClientConnection : TCPConnection {
-
 		internal event EventHandler<ClientDisconnectedEventArgs> _OnClientDisconnected;
 
 		private readonly TCPServer server;
 
-		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo, TCPClientInfo clientInfo, TCPServer server, SerializationConfiguration config)
-			: base(client, serverInfo, clientInfo, server, config) {
+		internal ServerToClientConnection(TcpClient client, TCPClientInfo serverInfo,
+										  TCPClientInfo clientInfo, TCPServer server,
+										  SerializationConfiguration config, EventHandler<ClientDisconnectedEventArgs> onDisconnect)
+			: base(client, serverInfo, clientInfo, server, config,
+				   (_, _) => { }, (_, _) => { }, (_, _) => { }) {
 			this.server = server;
+			_OnClientDisconnected += onDisconnect;
 		}
 
 		/// <summary>
@@ -31,12 +34,12 @@ namespace SimpleTCP.Connections {
 				evnt.Set();
 				ListeningForData = false;
 				server.connectedClients.Remove(data.SenderID);
-				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Success));
 				Dispose();
 			}
 			if (data.DataType == typeof(SocketException)) {
 				server.connectedClients.Remove(data.SenderID);
-				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs((TCPClientInfo)data.ReceivedObject, Enums.DisconnectType.Interrupted));
 			}
 		}
 
@@ -48,7 +51,7 @@ namespace SimpleTCP.Connections {
 				SendDataImmediate(DataIDs.CLIENT_DISCONNECTED, new[] { clientID });
 				SendingData = false;
 				evnt.Set();
-				_OnClientDisconnected?.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));
+				_OnClientDisconnected.Invoke(this, new ClientDisconnectedEventArgs(infoAboutOtherSide, Enums.DisconnectType.Kicked));
 				ListeningForData = false;
 				Dispose();
 			}

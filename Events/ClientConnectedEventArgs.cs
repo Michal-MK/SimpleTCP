@@ -3,7 +3,7 @@ using SimpleTCP.Structures;
 
 namespace SimpleTCP.Events {
 	/// <summary>
-	/// OnConnectionReceived event arguments
+	/// Event data provided when a client successfully connects
 	/// </summary>
 	public class ClientConnectedEventArgs : EventArgs {
 
