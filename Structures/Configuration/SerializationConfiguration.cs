@@ -13,9 +13,15 @@ namespace Igor.TCP {
 		/// </summary>
 		public Dictionary<Type, ICustomSerializer> CustomSerializers { get; }
 
-		public ICustomSerializer<TData> Get<TData>(Type type) {
-			if (CustomSerializers.ContainsKey(type)) {
-				return (ICustomSerializer<TData>)CustomSerializers[type];
+		/// <summary>
+		/// Getter for strongly typed registered serializers 
+		/// </summary>
+		/// <typeparam name="TData">The type for which to find a serializer</typeparam>
+		/// <returns>The <see cref="ICustomSerializer"/> implementation</returns>
+		public ICustomSerializer<TData> Get<TData>() {
+			Type tDataType = typeof(TData);
+			if (CustomSerializers.ContainsKey(tDataType)) {
+				return (ICustomSerializer<TData>)CustomSerializers[tDataType];
 			}
 			return null;
 		}
@@ -32,6 +38,18 @@ namespace Igor.TCP {
 												  .Invoke(CustomSerializers[type], new[] { data });
 		}
 
+		/// <summary>
+		/// Is a serializer present for the provided <see cref="Type"/>
+		/// </summary>
+		/// <param name="type">The type to check for</param>
+		/// <returns><see langword="true"/> if present, <see langword="false"/> otherwise</returns>
 		public bool ContainsSerializationRule(Type type) => CustomSerializers.ContainsKey(type);
+		
+		/// <summary>
+		/// Is a serializer present for the provided <see cref="Type"/>
+		/// </summary>
+		/// <typeparam name="TData">The type to check for</typeparam>
+		/// <returns><see langword="true"/> if present, <see langword="false"/> otherwise</returns>
+		public bool ContainsSerializationRule<TData>() => CustomSerializers.ContainsKey(typeof(TData));
 	}
 }

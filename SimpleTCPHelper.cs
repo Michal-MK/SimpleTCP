@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
 
 namespace Igor.TCP {
 	/// <summary>
@@ -15,12 +16,29 @@ namespace Igor.TCP {
 		/// <summary>
 		/// Returns active IPv4 Address of this computer
 		/// </summary>
-		/// <exception cref="WebException"></exception>
-		public static IPAddress GetActiveIPv4Address(int timeout = 2000) {
+		public static IPAddress GetActiveIPv4Address() {
 			using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
 			
 			socket.Connect("8.8.8.8", 80);
 			return ((IPEndPoint)socket.LocalEndPoint).Address;
+		}	
+		
+		/// <summary>
+		/// Returns active IPv4 Address of this computer
+		/// </summary>
+		public static async Task<NetworkAddressState> GetActiveIPv4AddressAsync(int timeoutMs = 2000) {
+			using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+			
+			Task timeout = Task.Delay(timeoutMs);
+			
+			try {
+				await Task.WhenAny(timeout, socket.ConnectAsync("8.8.8.8", 80));
+			}
+			catch (SocketException) {
+				return NetworkAddressState.Fail();
+			}
+			
+			return timeout.IsCompleted ? NetworkAddressState.Fail() : NetworkAddressState.Connected(((IPEndPoint)socket.LocalEndPoint).Address);
 		}
 
 		/// <summary>
@@ -111,7 +129,7 @@ namespace Igor.TCP {
 			return obj;
 		}
 
-		internal static T GetObject<T>(byte[] bytes, SerializationConfiguration serializationConfig) where T : class, new()  {
+		internal static T GetObject<T>(byte[] bytes, SerializationConfiguration serializationConfig) where T : new()  {
 			Type tType = typeof(T);
 
 			if (tType == typeof(bool)) {
@@ -146,8 +164,8 @@ namespace Igor.TCP {
 			}
 			try {
 				if (serializationConfig != null) {
-					if (serializationConfig.ContainsSerializationRule(tType)) {
-						return serializationConfig.Get<T>(tType).Deserialize(bytes);
+					if (serializationConfig.ContainsSerializationRule<T>()) {
+						return serializationConfig.Get<T>().Deserialize(bytes);
 					}
 				}
 				using MemoryStream ms = new();

@@ -20,22 +20,36 @@ namespace Igor.TCP {
 
 		public class Builder {
 			private bool clientToServerRequests;
-			private Dictionary<Type, ICustomSerializer> serializers = new();
+			private readonly Dictionary<Type, ICustomSerializer> serializers = new();
 
-
+			/// <summary>
+			/// Start of the builder chain
+			/// </summary>
+			/// <returns>The reference to the builder</returns>
 			public static Builder Create() {
-				return new Builder();
+				return new();
 			}
 
+			/// <summary>
+			/// Convert the current builder state to the final <see cref="ClientConfiguration"/> instance 
+			/// </summary>
 			public ServerConfiguration Build() {
-				return new ServerConfiguration(clientToServerRequests, serializers);
+				return new(clientToServerRequests, serializers);
 			}
 
+			/// <summary>
+			/// Allows clients to make requests to the server
+			/// </summary>
 			public Builder AllowClientToServerRequests() {
 				clientToServerRequests = true;
 				return this;
 			}
 			
+			/// <summary>
+			/// Add a custom serializer for a type
+			/// </summary>
+			/// <param name="serializer">The serializer instance</param>
+			/// <typeparam name="T">The type of the object to serialize</typeparam>
 			public Builder AddSerializer<T>(ICustomSerializer<T> serializer) {
 				serializers.Add(typeof(T), serializer);
 				return this;

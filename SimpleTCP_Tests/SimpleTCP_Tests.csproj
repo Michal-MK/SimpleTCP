@@ -72,6 +72,7 @@
     <Compile Include="ServerClientTests_SendUnknown.cs" />
     <Compile Include="ServerClientTests_Timeout.cs" />
     <Compile Include="ServerTests.cs" />
+    <Compile Include="SimpleTCPHelperTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
