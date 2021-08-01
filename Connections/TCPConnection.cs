@@ -4,7 +4,7 @@ using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using SimpleTCP.Connections.Interaces;
+using SimpleTCP.Connections.Interfaces;
 using SimpleTCP.DataTransfer;
 using SimpleTCP.Events;
 using SimpleTCP.Exceptions;

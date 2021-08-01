@@ -6,7 +6,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using SimpleTCP.Connections;
-using SimpleTCP.Connections.Interaces;
+using SimpleTCP.Connections.Interfaces;
 using SimpleTCP.Events;
 using SimpleTCP.Exceptions;
 using SimpleTCP.Structures;
