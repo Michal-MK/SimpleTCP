@@ -14,7 +14,7 @@ namespace SimpleTCP.Tests {
 	[Serializable]
 	public struct TestDataTwo {
 		public string[] moreData;
-		public int ID;
+		public int id;
 	}
 
 	[TestClass]
@@ -37,13 +37,13 @@ namespace SimpleTCP.Tests {
 			TestDataStruct resp = await server.GetValue<TestDataStruct>(1, PACKET_ID);
 
 			Assert.IsTrue(resp.data[0] == "Ahoj");
-			Assert.IsTrue(resp.dataTest[0].ID == 0);
+			Assert.IsTrue(resp.dataTest[0].id == 0);
 			Assert.IsTrue(resp.dataTest[0].moreData[0] == "Hello");
 
 			TestDataStruct resp2 = await client.GetValue<TestDataStruct>(PACKET_ID);
 
 			Assert.IsTrue(resp2.data[0] == "Ahoooooooooooj");
-			Assert.IsTrue(resp2.dataTest[0].ID == 0);
+			Assert.IsTrue(resp2.dataTest[0].id == 0);
 			Assert.IsTrue(resp2.dataTest[0].moreData[0] == "Hell00000000000");
 			
 			server.Stop();
@@ -54,7 +54,7 @@ namespace SimpleTCP.Tests {
 				data = new[] { "Ahoj" },
 				dataTest = new[] {
 					new TestDataTwo {
-						ID = 0, moreData = new[] { "Hello" }
+						id = 0, moreData = new[] { "Hello" }
 					}
 				}
 			};
@@ -65,7 +65,7 @@ namespace SimpleTCP.Tests {
 				data = new[] { "Ahoooooooooooj" },
 				dataTest = new[] {
 					new TestDataTwo {
-						ID = 0, moreData = new[] { "Hell00000000000" }
+						id = 0, moreData = new[] { "Hell00000000000" }
 					}
 				}
 			};

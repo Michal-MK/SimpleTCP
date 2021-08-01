@@ -10,7 +10,7 @@ namespace SimpleTCP.Tests {
 	[TestClass]
 	public class ServerClientTests_Connect : TestBase {
 
-		private bool clientConnectedEventFired = false;
+		private bool clientConnectedEventFired;
 
 		[TestMethod]
 		public async Task Connect() {

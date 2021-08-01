@@ -9,12 +9,13 @@ using SimpleTCP.Tests.Base;
 namespace SimpleTCP.Tests {
 	[TestClass]
 	public class ServerClientTests_CustomSerialization : TestBase {
-		private Func<int, MyComplexClass> DATA => i => new MyComplexClass {
-			ID = i,
-			Text = "Hello World!",
-			State = true,
-			Data = new List<int> { 0, 1, 2, 3, 4 }
+		private Func<int, int, MyComplexClass> DATA => (i1, i2) => new MyComplexClass {
+			ID = i1,
+			Text = "Hello World! " + i1 + i2,
+			Data = new List<int> { 0, 1, 2, 3, 4, i2 }
 		};
+
+		private const float TOLERANCE = 0.0001f;
 
 		private bool serialization1Passed;
 		private bool serialization2Passed;
@@ -43,20 +44,20 @@ namespace SimpleTCP.Tests {
 			await server.Start(55550);
 			await client.ConnectAsync(1000);
 
-			client.DefineCustomPacket<MyComplexClass>(PACKET_ID, (se, ea) => {
-				if (ea.ID == 1) {
+			client.DefineCustomPacket<MyComplexClass>(PACKET_ID, (_, ea) => {
+				if (ea.ID == 1 && ea.Data[ea.Data.Count - 1] == 100 && ea.Text.EndsWith("101")) {
 					idOnePassed = true;
 				}
-				if (ea.ID == 2) {
+				if (ea.ID == 2 && ea.Data[ea.Data.Count - 1] == 200 && ea.Text.EndsWith("202")) {
 					idTwoPassed = true;
 				}
 				if (AllPassed()) {
 					evnt.Set();
-				};
+				}
 			});
 
-			server.GetConnection(1).SendData(PACKET_ID, DATA(1));
-			server.GetConnection(1).SendData(PACKET_ID, DATA(2));
+			server.GetConnection(1).SendData(PACKET_ID, DATA(1, 100));
+			server.GetConnection(1).SendData(PACKET_ID, DATA(2, 200));
 
 			await Task.Run(Wait);
 
@@ -66,14 +67,14 @@ namespace SimpleTCP.Tests {
 		private MyComplexClass Deserialization(byte[] data) {
 			if (data[0] == 1) {
 				serialization1Passed = true;
-				return DATA(1);
+				return DATA(1, 100);
 			}
 			serialization2Passed = true;
-			return DATA(2);
+			return DATA(2, 200);
 		}
 
 		private byte[] Serialization(MyComplexClass data) {
-			if (data.ID == 1) {
+			if (data.ID == 1 && data.Data[data.Data.Count - 1] == 100 && data.Text.EndsWith("101")) {
 				deserialization1Passed = true;
 				return new byte[] { 1 };
 			}
@@ -84,14 +85,14 @@ namespace SimpleTCP.Tests {
 		private bool AllPassed() => serialization1Passed && deserialization1Passed &&
 									serialization2Passed && deserialization2Passed &&
 									idOnePassed && idTwoPassed;
-		
+
 		private bool serialization1PassedStruct;
 		private bool serialization2PassedStruct;
 		private bool deserialization1PassedStruct;
 		private bool deserialization2PassedStruct;
 		private bool idOnePassedStruct;
 		private bool idTwoPassedStruct;
-		
+
 		[TestMethod]
 		public async Task SerializeCustomStruct() {
 
@@ -112,16 +113,16 @@ namespace SimpleTCP.Tests {
 			await server.Start(55550);
 			await client.ConnectAsync(1000);
 
-			client.DefineCustomPacket<float>(PACKET_ID, (se, ea) => {
-				if (ea == 1) {
+			client.DefineCustomPacket<float>(PACKET_ID, (_, ea) => {
+				if (Math.Abs(ea - 1) < TOLERANCE) {
 					idOnePassedStruct = true;
 				}
-				if (ea == 2) {
+				if (Math.Abs(ea - 2) < TOLERANCE) {
 					idTwoPassedStruct = true;
 				}
 				if (AllPassedStruct()) {
 					evnt.Set();
-				};
+				}
 			});
 
 			server.GetConnection(1).SendData(PACKET_ID, 5f);
@@ -131,7 +132,7 @@ namespace SimpleTCP.Tests {
 
 			server.Stop();
 		}
-		
+
 		private float DeserializationStruct(byte[] data) {
 			if (data[0] == 1) {
 				serialization1PassedStruct = true;
@@ -142,27 +143,24 @@ namespace SimpleTCP.Tests {
 		}
 
 		private byte[] SerializationStruct(float data) {
-			if (data == 1f) {
+			if (Math.Abs(data - 1f) < TOLERANCE) {
 				deserialization1PassedStruct = true;
 				return new byte[] { 1 };
 			}
 			deserialization2PassedStruct = true;
 			return new byte[] { 2 };
 		}
-		
+
 		private bool AllPassedStruct() => serialization1PassedStruct && deserialization1PassedStruct &&
 										  serialization2PassedStruct && deserialization2PassedStruct &&
 										  idOnePassedStruct && idTwoPassedStruct;
-
 	}
 
 	class MyComplexClass {
 		public int ID { get; set; }
 
-		public List<int> Data { get; set; }
+		public List<int> Data { get; set; } = new();
 
-		public bool State { get; set; }
-
-		public string Text { get; set; }
+		public string Text { get; set; } = "";
 	}
 }

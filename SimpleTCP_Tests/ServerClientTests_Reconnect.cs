@@ -18,7 +18,7 @@ namespace SimpleTCP.Tests {
 			
 			client.Disconnect();
 
-			await Task.Delay(100);;
+			await Task.Delay(100);
 			
 			Assert.IsTrue(client.Connection == null);
 

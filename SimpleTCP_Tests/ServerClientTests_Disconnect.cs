@@ -8,7 +8,8 @@ using SimpleTCP.Tests.Base;
 namespace SimpleTCP.Tests {
 	[TestClass]
 	public class ServerClientTests_Disconnect : TestBase {
-		bool disconnectEvent;
+		
+		private bool disconnectEvent;
 
 		[TestMethod]
 		public async Task Disconnect() {

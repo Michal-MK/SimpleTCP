@@ -15,7 +15,7 @@ namespace SimpleTCP.Tests {
 
 	[Serializable]
 	public class Machine {
-		public Guid GUID { get; set; }
+		public Guid GUID { get; set; } = Guid.NewGuid();
 		public StateEnum State { get; set; }
 
 		public override bool Equals(object obj) {

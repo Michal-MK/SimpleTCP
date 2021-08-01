@@ -34,24 +34,24 @@ namespace SimpleTCP.Tests {
 
 			await client1.ConnectAsync(1000);
 
-			client1.Connection.OnStringReceived += (s, e) => {
+			client1.Connection.OnStringReceived += (_, e) => {
 				if (e.Data == DATA_STR) receivedStringDataCount++;
 				if (HasAll()) evnt.Set();
 			};
 
-			client1.Connection.OnInt64Received += (s, e) => {
+			client1.Connection.OnInt64Received += (_, e) => {
 				if (e.Data == DATA_LONG) receivedLongDataCount++;
 				if (HasAll()) evnt.Set();
 			};
 
 			await client2.ConnectAsync(1000);
 			
-			client2.Connection.OnStringReceived += (s, e) => {
+			client2.Connection.OnStringReceived += (_, e) => {
 				if (e.Data == DATA_STR) receivedStringDataCount++;
 				if (HasAll()) evnt.Set();
 			};
 
-			client2.Connection.OnInt64Received += (s, e) => {
+			client2.Connection.OnInt64Received += (_, e) => {
 				if (e.Data == DATA_LONG) receivedLongDataCount++;
 				if (HasAll()) evnt.Set();
 			};
@@ -107,6 +107,6 @@ namespace SimpleTCP.Tests {
 
 	[Serializable]
 	class TestDataClass {
-		public List<int> Data { get; set; }
+		public List<int> Data { get; set; } = new();
 	}
 }

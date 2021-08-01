@@ -12,11 +12,11 @@ namespace SimpleTCP.Tests {
 		#region Property synchronization
 
 		public string[] ServerProperty { get; set; } = { "Hello", "Server" };
-		private string[] ClientProperty { get; set; } = null;
+		private string[]? ClientProperty { get; set; } = null;
 		
-		private string[] clientPropertyPublic;
+		private string[]? clientPropertyPublic;
 
-		public string[] ClientPropertyPublic {
+		public string[]? ClientPropertyPublic {
 			get => clientPropertyPublic;
 			set {
 				clientPropertyPublic = value;
@@ -37,7 +37,7 @@ namespace SimpleTCP.Tests {
 			
 			await server.Start(55552);
 
-			server.OnClientConnected += (_, e) => {
+			server.OnClientConnected += (_, _) => {
 				server.SyncProperty(1, this, nameof(ServerProperty), PROP_ID);
 				localEvnt.Set();
 			};
@@ -56,7 +56,7 @@ namespace SimpleTCP.Tests {
 			await Task.Run(Wait);
 
 			Assert.IsNotNull(ClientPropertyPublic);
-			Assert.IsTrue(ClientPropertyPublic[0] == "Hello" && ClientPropertyPublic[1] == "Server");
+			Assert.IsTrue(ClientPropertyPublic![0] == "Hello" && ClientPropertyPublic[1] == "Server");
 
 			server.Stop();
 		}
@@ -68,7 +68,7 @@ namespace SimpleTCP.Tests {
 		public string MyProp { get; set; } = "Hello Property";
 		public string MyPropClient { get; set; } = "Hello";
 
-		private bool[] checks;
+		private bool[] checks = new bool[3];
 
 		private const byte SYNC_ID = 88;
 
@@ -98,16 +98,14 @@ namespace SimpleTCP.Tests {
 
 			await Task.Run(Wait);
 
-			for (int i = 0; i < checks.Length; i++) {
-				Assert.IsTrue(checks[i]);
+			foreach (bool b in checks) {
+				Assert.IsTrue(b);
 			}
 
 			server.Stop();
 		}
 
 		private void Client_OnPropertySynchronized(object sender, OnPropertySynchronizationEventArgs e) {
-			checks = new bool[3];
-
 			checks[0] = e.PropertyName == nameof(MyPropClient);
 			checks[1] = e.SynchronizationPacketID == SYNC_ID;
 			checks[2] = MyProp == MyPropClient;

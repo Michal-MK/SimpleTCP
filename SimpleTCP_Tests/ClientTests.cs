@@ -86,7 +86,7 @@ namespace SimpleTCP.Tests {
 
 		[Serializable]
 		public class Text<TText> {
-			public TText field;
+			public TText? field;
 		}
 
 		#endregion

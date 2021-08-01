@@ -26,7 +26,7 @@ namespace SimpleTCP.Tests {
 		private static string RefImplementation() {
 			using Socket socket = new(AddressFamily.InterNetwork, SocketType.Dgram, 0);
 			socket.Connect("8.8.8.8", 65530);
-			IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+			IPEndPoint endPoint = (IPEndPoint)socket.LocalEndPoint;
 			return endPoint.Address.ToString();
 		}
 	}
